@@ -1,0 +1,36 @@
+{
+  "athletes": [
+    {"id": "w1", "name": "Mia Manganello", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w2", "name": "Sarah Warren", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w3", "name": "Greta Myers", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w4", "name": "Giorgia Birkeland", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w5", "name": "Piper Yde", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w6", "name": "Marly Soldan", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w7", "name": "Rebecca Simmons", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w8", "name": "Ilsa Shobe", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w9", "name": "Leah Choi", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w10", "name": "Elena Stave", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w11", "name": "Keeley Whitcomb", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "w12", "name": "Elise Stave", "nation": "USA", "gender": "women", "soqcRank": null},
+    {"id": "m1", "name": "Jordan Stolz", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m2", "name": "Ethan Cepuran", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m3", "name": "Carl Platt", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m4", "name": "Casey Dawson", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m5", "name": "Tommy Fitzgerald", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m6", "name": "Emery Lehman", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m7", "name": "Ian Frederick", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m8", "name": "Kelin Dunfee", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m9", "name": "Jon Tobon", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m10", "name": "Leo Drossos-Thompson", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m11", "name": "Samuel Hart-Gorman", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m12", "name": "William Silk", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m13", "name": "Max Weber", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m14", "name": "Sam Chamberlain", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m15", "name": "Zach Stoppelmoor", "nation": "USA", "gender": "men", "soqcRank": null},
+    {"id": "m16", "name": "Aiden Meacham", "nation": "USA", "gender": "men", "soqcRank": null}
+  ],
+  "races": {
+    "women": {"1": null, "2": null, "3": null, "4": null},
+    "men": {"1": null, "2": null, "3": null, "4": null}
+  }
+}
