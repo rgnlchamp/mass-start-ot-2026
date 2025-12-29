@@ -1122,9 +1122,17 @@ function renderRules() {
                     <li style="margin-bottom: 8px;">🔒 <strong>Protected:</strong> Direct Qualifiers and Top Team Pursuit Specialists cannot be cut.</li>
                 </ul>
                 
-                <p style="font-size: 0.8em; margin-top: 20px; text-align: center; opacity: 0.6;">
-                    *This is a simplified summary. Refer to the official USS Selection Procedures for full details.
-                </p>
+                <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <h4 style="color: #ccc; font-size: 0.9em; margin-bottom: 10px;">Official Documents</h4>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/bltcd66ae352ae96e83/694b3ece1e351c40b71969db/LT_Regs_25-26_Final_v2.2.pdf" target="_blank" style="text-decoration:none;">
+                            <button class="btn btn-outline-primary" style="width:100%; text-align:left;">📄 USS Rules & Regulations 2025-26 ↗</button>
+                        </a>
+                        <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/blt328a2be74a7640b7/69248cbe33936a0790e5d9ce/Athlete_Selection_Procedures_-_USS_Long_Track_-_Amendment_2_SIGNED.pdf" target="_blank" style="text-decoration:none;">
+                            <button class="btn btn-outline-primary" style="width:100%; text-align:left;">📄 Olympic Selection Procedures (Amendment 2) ↗</button>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
 
