@@ -87,6 +87,19 @@ function loadFromStorage() {
                 saveToStorage();
             }
         }
+
+        // Calculate results for any race that has finishOrder but no results
+        ['women', 'men'].forEach(gender => {
+            [1, 2, 3, 4].forEach(raceNum => {
+                const race = appState.msRaces[gender][raceNum];
+                if (race && race.finishOrder && race.finishOrder.length > 0 && !race.results) {
+                    const sprintConfig = SPRINT_POINTS[race.format || 16];
+                    race.results = calculateRacePoints(race.finishOrder, race.intermediates || [], sprintConfig);
+                    console.log(`Calculated results for ${gender} race ${raceNum}`);
+                }
+            });
+        });
+
     } catch (e) { console.error('Error loading data:', e); }
 }
 
@@ -122,6 +135,7 @@ function renderCurrentTab() {
         case 'events': main.innerHTML = renderEventEntry(); break;
         case 'athletes': main.innerHTML = renderAthletes(); break;
         case 'help': main.innerHTML = renderRules(); break;
+        case 'results': main.innerHTML = renderMassStartStandings(); break;
     }
 
     // Post-render hooks
@@ -141,9 +155,13 @@ function renderDashboard() {
     const menStats = calculateReduction('men');
     const womenStats = calculateReduction('women');
 
-    // Calculate filled spots actually on the team (after cuts)
-    const menCount = Math.min(menStats.roster.length, menStats.teamCap);
-    const womenCount = Math.min(womenStats.roster.length, womenStats.teamCap);
+    // Calculate filled spots - ONLY count actual athletes, not placeholders like "Team Pursuit Slot X"
+    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot');
+    const menRealAthletes = menStats.roster.filter(a => isRealAthlete(a.name));
+    const womenRealAthletes = womenStats.roster.filter(a => isRealAthlete(a.name));
+
+    const menCount = Math.min(menRealAthletes.length, menStats.teamCap);
+    const womenCount = Math.min(womenRealAthletes.length, womenStats.teamCap);
 
     return `
         <div class="section-header">
@@ -205,7 +223,11 @@ function renderOlympicTeamTracker() {
     try {
         const gender = appState.viewGender;
         // Calculate the full team with reduction
-        const { roster, teamCap } = calculateReduction(gender);
+        const { roster: fullRoster, teamCap } = calculateReduction(gender);
+
+        // Filter out placeholder entries - only count real athletes
+        const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot');
+        const roster = fullRoster.filter(a => isRealAthlete(a.name));
 
         const qualifiedCount = roster.length;
         const cutCount = Math.max(0, qualifiedCount - teamCap);
@@ -226,14 +248,14 @@ function renderOlympicTeamTracker() {
         }
 
         return `
-            <div class="section-header">
-                <h2>2026 Olympic Team Tracker</h2>
-                <div class="btn-group">
+            <div class="section-header" style="flex-direction: row;">
+                <div class="btn-group" style="margin-right: 20px;">
                     <button class="btn ${gender === 'women' ? 'btn-primary' : 'btn-outline-primary'}" 
                         onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
                     <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
                         onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
                 </div>
+                <h2>2026 Olympic Team Tracker</h2>
             </div>
             
             <!-- DASHBOARD SUMMARY -->
@@ -248,7 +270,7 @@ function renderOlympicTeamTracker() {
                  <div class="stat-card">
                     <div class="stat-icon">🛡️</div>
                     <div class="stat-info">
-                        <span class="stat-value">${roster.filter(r => r.reductionRank === 0).length}</span>
+                        <span class="stat-value">${fullRoster.filter(r => r.reductionRank === 0).length}</span>
                         <span class="stat-label">Protected</span>
                     </div>
                 </div>
@@ -277,7 +299,7 @@ function renderOlympicTeamTracker() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${roster.slice(0, teamCap).map((t, idx) => {
+                        ${fullRoster.slice(0, teamCap).map((t, idx) => {
             let displayRank = t.reductionRank === 0 ? '1 (Protected)' : t.reductionRank;
 
             // Custom Display for Team Pursuit (User Request)
@@ -303,7 +325,7 @@ function renderOlympicTeamTracker() {
                             </tr>
                         `;
         }).join('')}
-                        ${roster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
+                        ${fullRoster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
                     </tbody>
                 </table>
                 </div>
@@ -496,27 +518,41 @@ function renderDistanceBreakdown(gender) {
         // Fillers
         let displayList = [...qualifiers];
         let totalQuota = config.quota;
-        // Team Pursuit now shows open spots (Quota 3) - suppression removed
         while (displayList.length < totalQuota) {
             if (dist === 'team_pursuit') {
-                displayList.push({ name: 'Available', type: 'Protected Slot' });
+                displayList.push({ name: 'Available', type: 'HP Discretion' });
             } else {
-                displayList.push({ name: 'Available', type: 'Open' });
+                displayList.push({ name: 'Available', type: 'O. Trials' });
             }
         }
 
         return `
                 <div class="result-box" style="border:1px solid #ddd; padding:10px; border-radius:8px;">
-                     <h4 style="margin:0 0 5px 0; border-bottom:2px solid #eee; padding-bottom:5px; display:flex; justify-content:space-between;">
-                        ${dist} <span>Quota: ${config.quota}</span>
+                     <h4 style="margin:0 0 5px 0; border-bottom:2px solid #eee; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>${dist}</span>
+                        <span style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn btn-sm" onclick="showSkatersToWatch('${gender}', '${dist}')" style="background:#337ab7; padding:2px 6px; font-size:11px;" title="Skaters to Watch">👀</button>
+                            <span>Quota: ${config.quota}</span>
+                        </span>
                     </h4>
                     <ul style="list-style:none; padding:0; margin:0;">
-                         ${displayList.map(s => `
+                         ${displayList.map(s => {
+            let bgColor = '#5cb85c'; // Default green for Trials qualifiers
+            let textColor = '#fff';
+            if (s.type === 'Direct' || s.type === 'Protected') {
+                bgColor = '#d9534f'; textColor = '#fff';
+            } else if (s.type === 'HP Discretion') {
+                bgColor = '#888'; textColor = '#fff';
+            } else if (s.type === 'O. Trials' && s.name === 'Available') {
+                bgColor = '#337ab7'; textColor = '#fff';
+            }
+            return `
                             <li style="padding:4px 0; border-bottom:1px dashed #ccc; display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-weight:500">${s.name}</span>
-                                <span class="badge" style="background:${(s.type === 'Direct' || s.type === 'Protected') ? '#d9534f' : s.type === 'Protected Slot' ? '#ffcccc' : s.type === 'Open' ? '#eee' : '#5cb85c'}; color:${(s.type === 'Open' || s.type === 'Protected Slot') ? '#555' : '#fff'}">${s.type}</span>
+                                <span class="badge" style="background:${bgColor}; color:${textColor}">${s.type}</span>
                             </li>
-                        `).join('')}
+                        `;
+        }).join('')}
                     </ul>
                 </div>
             `;
@@ -1119,6 +1155,392 @@ function renderRules() {
             </div>
         </div>
     `;
+}
+
+// =============================================================================
+// MASS START STANDINGS (PUBLIC VIEW)
+// =============================================================================
+function renderMassStartStandings() {
+    const gender = appState.viewGender;
+    const standings = calculateMassStartStandings(gender);
+
+    // Filter out athletes with 0 points
+    const filteredStandings = standings.filter(s => s.total > 0);
+
+    // Get pre-nominated athletes for this gender's mass start (for qualified badge)
+    const preNominated = OLYMPIC_CONFIG[gender].mass_start?.preNominated || [];
+
+    return `
+        <div class="section-header" style="flex-direction: row;">
+            <div class="btn-group" style="margin-right: 20px;">
+                <button class="btn ${gender === 'women' ? 'btn-primary' : 'btn-outline-primary'}" 
+                    onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
+                <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
+                    onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
+            </div>
+            <div class="btn-group" style="margin-right: 20px;">
+                <button class="btn btn-outline-primary" onclick="shareMsStandingsImage()" title="Share as Image (Instagram)">📸 Instagram</button>
+                <button class="btn btn-outline-primary" onclick="shareMsStandingsPdf()" title="Download PDF">📄 PDF</button>
+            </div>
+            <h2>🏆 Mass Start Series Standings</h2>
+        </div>
+
+        <div class="card" id="ms-standings-card">
+            <h3 style="margin-top:0;">${gender === 'women' ? "Women's" : "Men's"} Overall Points</h3>
+            <p class="text-muted">Accumulated points from Races 1-4. (Official selection uses Best 3 of 4).</p>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px">Rank</th>
+                            <th>Athlete</th>
+                            <th class="text-center">Race 1</th>
+                            <th class="text-center">Race 2</th>
+                            <th class="text-center">Race 3</th>
+                            <th class="text-center">Race 4</th>
+                            <th class="text-center" style="font-size:1.1em; color:#D4AF37;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredStandings.length > 0 ? filteredStandings.map((s, i) => {
+        const rank = i + 1;
+        let rankClass = '';
+        if (rank === 1) rankClass = 'rank-1';
+        if (rank === 2) rankClass = 'rank-2';
+        if (rank === 3) rankClass = 'rank-3';
+
+        const isQualified = preNominated.includes(s.name);
+
+        return `
+                            <tr>
+                                <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${rank}</td>
+                                <td>
+                                    <strong>${s.name}</strong>
+                                    ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">✅ Pre-Qualified</span>' : ''}
+                                </td>
+                                <td class="text-center">${s.races[1] || '<span class="text-muted">-</span>'}</td>
+                                <td class="text-center">${s.races[2] || '<span class="text-muted">-</span>'}</td>
+                                <td class="text-center">${s.races[3] || '<span class="text-muted">-</span>'}</td>
+                                <td class="text-center">${s.races[4] || '<span class="text-muted">-</span>'}</td>
+                                <td class="text-center" style="font-weight:bold; font-size:1.1em; color:#D4AF37;">${s.total}</td>
+                            </tr>
+                            `;
+    }).join('') : '<tr><td colspan="7" class="text-center text-muted">No results recorded yet.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// Share MS Standings as Image (for Instagram - 1080x1350 format)
+function shareMsStandingsImage() {
+    const gender = appState.viewGender;
+    const standings = calculateMassStartStandings(gender);
+    const filteredStandings = standings.filter(s => s.total > 0);
+    const genderLabel = gender === 'women' ? "Women's" : "Men's";
+
+    showToast('Generating Instagram image...');
+
+    // Limit to top 12 for better mobile readability
+    const displayAthletes = filteredStandings.slice(0, 12);
+    const showingPartial = filteredStandings.length > 12;
+
+    // Fixed larger sizes for 12 or fewer athletes
+    const basePadding = 14;
+    const nameFontSize = 26;
+    const pointsFontSize = 24;
+    const totalFontSize = 28;
+    const headerFontSize = 22;
+
+    // Create a temporary container for the Instagram-formatted image
+    const container = document.createElement('div');
+    container.id = 'instagram-export';
+    container.style.cssText = `
+        position: fixed; left: -9999px; top: 0;
+        width: 1080px; height: 1350px;
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        padding: 40px;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+        color: white;
+    `;
+
+    // Build the content
+    container.innerHTML = `
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 24px; color: #D4AF37; margin-bottom: 10px;">★ 2026 U.S. OLYMPIC TEAM TRIALS ★</div>
+            <div style="font-size: 48px; font-weight: bold; color: #fff;">🏆 Mass Start Standings</div>
+            <div style="font-size: 32px; color: #D4AF37; margin-top: 10px;">${genderLabel} Overall Points</div>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.1); border-radius: 15px; overflow: hidden;">
+            <thead>
+                <tr style="background: rgba(212,175,55,0.3);">
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">Rank</th>
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37; text-align: left;">Athlete</th>
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R1</th>
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R2</th>
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R3</th>
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R4</th>
+                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${displayAthletes.map((s, i) => {
+        const rank = i + 1;
+        let medalStyle = '';
+        let medalEmoji = '';
+        if (rank === 1) { medalStyle = 'background: linear-gradient(135deg, #FFD700, #FFA500);'; medalEmoji = '🥇'; }
+        if (rank === 2) { medalStyle = 'background: linear-gradient(135deg, #C0C0C0, #A0A0A0);'; medalEmoji = '🥈'; }
+        if (rank === 3) { medalStyle = 'background: linear-gradient(135deg, #CD7F32, #8B4513);'; medalEmoji = '🥉'; }
+        return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${nameFontSize}px; font-weight: bold; ${medalStyle}">${medalEmoji}${rank}</td>
+                        <td style="padding: ${basePadding}px; font-size: ${nameFontSize}px; font-weight: bold;">${s.name}</td>
+                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[1] || '-'}</td>
+                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[2] || '-'}</td>
+                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[3] || '-'}</td>
+                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[4] || '-'}</td>
+                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${totalFontSize}px; font-weight: bold; color: #D4AF37;">${s.total}</td>
+                    </tr>`;
+    }).join('')}
+            </tbody>
+        </table>
+        
+        <div style="position: absolute; bottom: 25px; left: 40px; right: 40px; text-align: center;">
+            ${showingPartial ? '<div style="font-size: 16px; color: #D4AF37; margin-bottom: 6px;">★ Top 12 Shown ★</div>' : ''}
+            <div style="font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 6px;">Best 3 of 4 races count for official selection</div>
+            <div style="font-size: 16px; color: #D4AF37;">Powered by saltygoldsupply.com</div>
+        </div>
+    `;
+
+    document.body.appendChild(container);
+
+    html2canvas(container, {
+        width: 1080,
+        height: 1350,
+        scale: 1,
+        logging: false
+    }).then(canvas => {
+        canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const genderShort = gender === 'women' ? 'Women' : 'Men';
+            a.download = `OT2026_MS_Standings_${genderShort}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+            container.remove();
+            showToast('Instagram image downloaded! 📸');
+        }, 'image/png');
+    }).catch(err => {
+        console.error('Error generating image:', err);
+        container.remove();
+        showToast('Error generating image');
+    });
+}
+
+// Share MS Standings as PDF
+function shareMsStandingsPdf() {
+    const gender = appState.viewGender;
+    const standings = calculateMassStartStandings(gender);
+    const filteredStandings = standings.filter(s => s.total > 0);
+    const genderLabel = gender === 'women' ? "Women's" : "Men's";
+
+    // Dynamic sizing for PDF based on athlete count
+    const athleteCount = filteredStandings.length;
+    const pdfPadding = athleteCount <= 12 ? 12 : athleteCount <= 16 ? 10 : 8;
+    const pdfFontSize = athleteCount <= 12 ? 14 : athleteCount <= 16 ? 12 : 10;
+
+    // Create printable HTML with Instagram-style design
+    const printHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${genderLabel} Mass Start Standings</title>
+            <style>
+                @page { margin: 0.5in; }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    padding: 40px;
+                    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+                    color: white;
+                    min-height: 100vh;
+                    margin: 0;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
+                .header { text-align: center; margin-bottom: 30px; }
+                .header-top { font-size: 18px; color: #D4AF37; margin-bottom: 10px; }
+                .header-title { font-size: 36px; font-weight: bold; color: #fff; margin-bottom: 10px; }
+                .header-subtitle { font-size: 24px; color: #D4AF37; }
+                .subtitle { text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 25px; font-size: 14px; }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 10px;
+                    overflow: hidden;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                th { 
+                    background: rgba(212,175,55,0.3); 
+                    color: #D4AF37; 
+                    padding: ${pdfPadding}px;
+                    font-size: ${pdfFontSize}px;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                td { 
+                    padding: ${pdfPadding}px; 
+                    text-align: center;
+                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                    font-size: ${pdfFontSize}px;
+                }
+                .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500) !important; color: #000; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0) !important; color: #000; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513) !important; color: #fff; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .name { text-align: left; font-weight: bold; }
+                .total { font-weight: bold; color: #D4AF37; font-size: 16px; }
+                .footer { 
+                    text-align: center; 
+                    margin-top: 30px; 
+                    padding-top: 20px;
+                    border-top: 1px solid rgba(255,255,255,0.1);
+                }
+                .footer-note { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+                .footer-brand { font-size: 14px; color: #D4AF37; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="header-top">★ 2026 U.S. OLYMPIC TEAM TRIALS ★</div>
+                <div class="header-title">🏆 Mass Start Standings</div>
+                <div class="header-subtitle">${genderLabel} Overall Points</div>
+            </div>
+            <p class="subtitle">Accumulated points from Races 1-4 (Best 3 of 4 for official selection)</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th style="text-align:left;">Athlete</th>
+                        <th>R1</th>
+                        <th>R2</th>
+                        <th>R3</th>
+                        <th>R4</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filteredStandings.map((s, i) => {
+        const rank = i + 1;
+        let rankClass = '';
+        let medalEmoji = '';
+        if (rank === 1) { rankClass = 'rank-1'; medalEmoji = '🥇'; }
+        if (rank === 2) { rankClass = 'rank-2'; medalEmoji = '🥈'; }
+        if (rank === 3) { rankClass = 'rank-3'; medalEmoji = '🥉'; }
+        return `
+                    <tr>
+                        <td class="${rankClass}">${medalEmoji}${rank}</td>
+                        <td class="name">${s.name}</td>
+                        <td>${s.races[1] || '-'}</td>
+                        <td>${s.races[2] || '-'}</td>
+                        <td>${s.races[3] || '-'}</td>
+                        <td>${s.races[4] || '-'}</td>
+                        <td class="total">${s.total}</td>
+                    </tr>`;
+    }).join('')}
+                </tbody>
+            </table>
+            <div class="footer">
+                <div class="footer-note">Generated on ${new Date().toLocaleDateString()} | Unofficial Results</div>
+                <div class="footer-brand">Powered by <a href="https://saltygoldsupply.com" style="color: #D4AF37; text-decoration: underline;">saltygoldsupply.com</a></div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    // Open print dialog
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+    }, 500);
+
+    showToast('PDF ready to print/save 📄');
+}
+
+// Show Skaters to Watch modal
+function showSkatersToWatch(gender, dist) {
+    const data = SKATERS_TO_WATCH[gender]?.[dist];
+    if (!data) {
+        showToast('No data available for this distance');
+        return;
+    }
+
+    const genderLabel = gender === 'women' ? "Women's" : "Men's";
+    const distLabel = dist === 'mass_start' ? 'Mass Start' : dist === 'team_pursuit' ? 'Team Pursuit' : dist;
+
+    let content = '';
+    if (data.note) {
+        content = `<p style="text-align: center; color: #D4AF37; font-style: italic; padding: 20px;">${data.note}</p>`;
+    } else {
+        content = `
+            <table class="data-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Athlete</th>
+                        <th style="width:80px;">SB</th>
+                        <th style="width:50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.skaters.map(s => `
+                        <tr>
+                            <td>${s.rank}</td>
+                            <td style="font-weight:bold;">
+                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ↗</a>` : s.name}
+                            </td>
+                            <td><strong>${s.time}</strong></td>
+                            <td>${s.notes ? '<span style="color:#D4AF37; font-size:11px;">' + s.notes + '</span>' : ''}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <p style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
+                Season Bests 2025-26 | Source: speedskatingresults.com
+            </p>
+        `;
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'skaters-modal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.8); z-index: 10000;
+        display: flex; align-items: center; justify-content: center;
+    `;
+    modal.innerHTML = `
+        <div style="background: #1a1a2e; border-radius: 15px; padding: 25px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #D4AF37;">👀 ${genderLabel} ${distLabel} - Season's Best</h3>
+                <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer;">&times;</button>
+            </div>
+            <h4 style="margin: 0 0 15px 0; color: #888; font-weight: normal;">Skaters to Watch</h4>
+            ${content}
+        </div>
+    `;
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
 }
 
 function exportData() {
