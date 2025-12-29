@@ -194,7 +194,7 @@ function renderDashboard() {
                 <div class="stat-icon">👤</div>
                 <div class="stat-info">
                     <span class="stat-value">${menCount + womenCount}</span>
-                    <span class="stat-label">Total Team Size</span>
+                    <span class="stat-label">Total Team Size (Women/Men)</span>
                 </div>
             </div>
         </div>
@@ -1105,7 +1105,7 @@ function renderRules() {
         <div class="card mt-2">
             <h3>📜 Selection Process Outline</h3>
             <div style="text-align: left; padding: 0 10px; color: #ccc; line-height: 1.6;">
-                <p><strong>Team Size:</strong> Maximum 9 Men / 9 Women (Dependent on earned Quota spots).</p>
+                <p><strong>Team Size:</strong> Based on results from World Cups #1-#4 and Team USA's SOQC rankings, the men have a maximum of 8 Olympic Starting Positions and the Women have a maximum of 6 Olympic Starting Positions.</p>
                 
                 <h4 style="color: #D4AF37; margin-top: 15px;">How to Qualify</h4>
                 <ul style="list-style-type: none; padding-left: 10px;">
