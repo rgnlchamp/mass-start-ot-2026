@@ -1,4 +1,4 @@
-# Mass Start Olympic Trials Scoring System
+# 2026 U.S. Olympic Trials Tracker
 
 A web-based application for managing and scoring Mass Start Speedskating races for the U.S. Olympic Team Trials.
 

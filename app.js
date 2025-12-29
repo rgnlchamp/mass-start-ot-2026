@@ -20,7 +20,8 @@ let appState = {
     currentTab: 'dashboard',
     viewGender: 'women',
     viewDistance: '500m',
-    selectedMsRace: 3
+    selectedMsRace: 3,
+    isAdmin: false
 };
 
 // Points Constants
@@ -151,21 +152,21 @@ function renderDashboard() {
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">🇺🇸</div>
+                <div class="stat-icon">🦅</div>
                 <div class="stat-info">
                     <span class="stat-value">Team USA</span>
                     <span class="stat-label">Olympic Trials</span>
                 </div>
             </div>
              <div class="stat-card">
-                <div class="stat-icon">⛸️</div>
+                <div class="stat-icon">♂️</div>
                 <div class="stat-info">
                     <span class="stat-value">${menCount} / ${menStats.teamCap}</span>
                     <span class="stat-label">Men's Team</span>
                 </div>
             </div>
              <div class="stat-card">
-                <div class="stat-icon">⛸️</div>
+                <div class="stat-icon">♀️</div>
                 <div class="stat-info">
                     <span class="stat-value">${womenCount} / ${womenStats.teamCap}</span>
                     <span class="stat-label">Women's Team</span>
@@ -174,19 +175,16 @@ function renderDashboard() {
              <div class="stat-card">
                 <div class="stat-icon">👤</div>
                 <div class="stat-info">
-                    <span class="stat-value">${appState.athletes.length}</span>
-                    <span class="stat-label">Total Athletes</span>
+                    <span class="stat-value">${menCount + womenCount}</span>
+                    <span class="stat-label">Total Team Size</span>
                 </div>
             </div>
         </div>
         
-        <div class="card info-card mt-2">
-            <h3>⚡ Quick Actions</h3>
-            <p>Use the tabs above to manage event entries or track the live team roster.</p>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn btn-primary" onclick="appState.currentTab='events'; renderCurrentTab()">Enter Results</button>
-                <button class="btn btn-outline-primary" onclick="appState.currentTab='olympic'; renderCurrentTab()">View Team Roster</button>
-            </div>
+        </div>
+        
+        <div class="mt-2">
+            ${renderOlympicTeamTracker()}
         </div>
     `;
 }
@@ -247,13 +245,6 @@ function renderOlympicTeamTracker() {
                         <span class="stat-label">Roster Size</span>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📊</div>
-                    <div class="stat-info">
-                        <span class="stat-value">${cutCount}</span>
-                        <span class="stat-label">Athletes Cut</span>
-                    </div>
-                </div>
                  <div class="stat-card">
                     <div class="stat-icon">🛡️</div>
                     <div class="stat-info">
@@ -279,26 +270,35 @@ function renderOlympicTeamTracker() {
                         <tr>
                             <th style="width:50px">Row</th>
                             <th>Athlete</th>
-                            <th>Qualified Events</th>
+                            <th>Qualifying Basis</th>
                             <th>Priority Rank</th>
                             <th>Status</th>
+                            <th style="width:60px">Share</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${roster.map((t, idx) => {
-            const isCut = idx >= teamCap;
-            const displayRank = t.reductionRank === 0 ? '1 (Protected)' : t.reductionRank;
+                        ${roster.slice(0, teamCap).map((t, idx) => {
+            let displayRank = t.reductionRank === 0 ? '1 (Protected)' : t.reductionRank;
+
+            // Custom Display for Team Pursuit (User Request)
+            if (t.events.includes('TpSpec')) {
+                const tpRank = (gender === 'women') ? 3 : 1;
+                displayRank = `${tpRank} (Protected)`;
+            }
 
             return `
-                            <tr style="${isCut ? 'background-color: #fff5f5; color:#999;' : ''}">
+                            <tr>
                                 <td>${idx + 1}</td>
                                 <td><strong>${t.name}</strong></td>
-                                <td>${t.events.map(e => `<span class="badge ${e === 'TpSpec' ? 'badge-warn' : ''}">${e}</span>`).join(' ')}</td>
+                                <td>${t.events.map(e => `<span class="badge ${e === 'TpSpec' ? 'badge-warn' : ''}">${e === 'TpSpec' ? 'Team Pursuit' : e}</span>`).join(' ')}</td>
                                 <td><strong>${displayRank}</strong></td>
                                 <td>
-                                    ${isCut
-                    ? '<span class="status-cut">❌ Cut by Quota</span>'
-                    : t.reductionRank === 0 ? '<span class="status-qualified">🔒 Protected</span>' : '<span class="status-qualified">✅ On Team</span>'}
+                                    ${t.reductionRank === 0 ? '<span class="status-qualified">🔒 Protected</span>' : '<span class="status-qualified">✅ On Team</span>'}
+                                </td>
+                                <td>
+                                    ${!t.name.includes("Slot") && !t.name.includes("Available") ?
+                    `<button class="btn btn-sm" onclick="openShareModal('${t.name}')" style="background:#D4AF37; padding:2px 8px; font-size:12px;">📸</button>`
+                    : ''}
                                 </td>
                             </tr>
                         `;
@@ -335,7 +335,7 @@ function calculateReduction(gender) {
         config.preNominated.forEach(name => {
             let protection = 0; // Default Direct Nom
             if (dist === '10000m' && name === 'Casey Dawson') protection = 4; // Special rule for CASEY
-            qualifiers.push({ name, ranking: protection, type: 'Pre-Nom' });
+            qualifiers.push({ name, ranking: protection, type: 'Direct' });
         });
 
         // B. Trials Qualifiers
@@ -352,15 +352,20 @@ function calculateReduction(gender) {
                 trialsResults = []; // No trials qualifiers until series is finished
             }
         } else if (dist === 'team_pursuit') {
-            // Discretionary TP Specialists
-            // We store them in appState.events[gender]['team_pursuit'].results -> {name, rank: 1,2..}
-            // TP Specialists get a converted ranking.
-            // US is Top 3 WC -> Converted Rank is 1. (Protected)
+            // Team Pursuit Specialists & Placeholders
             const specialists = appState.events[gender]['team_pursuit']?.results || [];
-            const conversion = OLYMPIC_CONFIG.TP_CONVERSION[gender]; // likely 1
+            const conversion = OLYMPIC_CONFIG.TP_CONVERSION[gender]; // 0 (Protected)
+
+            // 1. Add Named Specialists
             specialists.forEach(s => {
                 qualifiers.push({ name: s.name, ranking: conversion, type: 'TpSpec' });
             });
+
+            // 2. Add Placeholders for empty spots (Up to Quota 3)
+            // This ensures the 3 protected spots are visible in the roster immediately
+            for (let i = specialists.length; i < config.quota; i++) {
+                qualifiers.push({ name: `Team Pursuit Slot ${i + 1}`, ranking: conversion, type: 'TpSpec' });
+            }
         } else {
             trialsResults = (appState.events[gender][dist].results || []).sort((a, b) => a.rank - b.rank);
         }
@@ -454,11 +459,11 @@ function renderDistanceBreakdown(gender) {
 
         // Re-calc who got what spot for display
         let qualifiers = [];
-        config.preNominated.forEach(n => qualifiers.push({ name: n, type: 'Pre-Nom' }));
+        config.preNominated.forEach(n => qualifiers.push({ name: n, type: 'Direct' }));
 
         if (dist === 'team_pursuit') {
             (appState.events[gender]['team_pursuit']?.results || []).forEach(r => {
-                qualifiers.push({ name: r.name, type: 'Specialist' });
+                qualifiers.push({ name: r.name, type: 'Protected' });
             });
         } else {
             let trialsResults = [];
@@ -491,9 +496,13 @@ function renderDistanceBreakdown(gender) {
         // Fillers
         let displayList = [...qualifiers];
         let totalQuota = config.quota;
-        if (dist === 'team_pursuit') totalQuota = 0; // Don't show open spots for TP
+        // Team Pursuit now shows open spots (Quota 3) - suppression removed
         while (displayList.length < totalQuota) {
-            displayList.push({ name: 'Available', type: 'Open' });
+            if (dist === 'team_pursuit') {
+                displayList.push({ name: 'Available', type: 'Protected Slot' });
+            } else {
+                displayList.push({ name: 'Available', type: 'Open' });
+            }
         }
 
         return `
@@ -505,7 +514,7 @@ function renderDistanceBreakdown(gender) {
                          ${displayList.map(s => `
                             <li style="padding:4px 0; border-bottom:1px dashed #ccc; display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-weight:500">${s.name}</span>
-                                <span class="badge" style="background:${s.type === 'Pre-Nom' ? '#d9534f' : s.type === 'Open' ? '#eee' : s.type === 'Specialist' ? '#f0ad4e' : '#5cb85c'}; color:${s.type === 'Open' ? '#999' : '#fff'}">${s.type}</span>
+                                <span class="badge" style="background:${(s.type === 'Direct' || s.type === 'Protected') ? '#d9534f' : s.type === 'Protected Slot' ? '#ffcccc' : s.type === 'Open' ? '#eee' : '#5cb85c'}; color:${(s.type === 'Open' || s.type === 'Protected Slot') ? '#555' : '#fff'}">${s.type}</span>
                             </li>
                         `).join('')}
                     </ul>
@@ -919,20 +928,56 @@ function renderAthletes() {
         </div>
         <div class="table-container">
             <table class="data-table">
-                <thead><tr><th>Name</th><th>Nation</th><th>Gender</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Name</th><th>Nation</th><th>Gender</th>${appState.isAdmin ? '<th>Actions</th>' : ''}</tr></thead>
                 <tbody>
                     ${appState.athletes.map((a, i) => `
                         <tr>
                             <td><strong>${a.name}</strong></td>
                             <td>${a.nation}</td>
                             <td>${a.gender}</td>
-                            <td><button class="btn btn-sm btn-danger" onclick="deleteAthlete(${i})">Del</button></td>
+                            ${appState.isAdmin ? `
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editAthlete(${i})">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteAthlete(${i})">Del</button>
+                            </td>` : ''}
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
         </div>
+
+
     `;
+}
+
+function editAthlete(idx) {
+    const athlete = appState.athletes[idx];
+    if (!athlete) return;
+
+    const newName = prompt("Edit Name:", athlete.name);
+    if (newName && newName.trim() !== "" && newName !== athlete.name) {
+        // Update Athlete Record
+        athlete.name = newName.trim();
+
+        // Update References in standard events (where name is cached)
+        ['women', 'men'].forEach(gender => {
+            Object.keys(appState.events[gender]).forEach(dist => {
+                const results = appState.events[gender][dist].results;
+                if (results) {
+                    results.forEach(r => {
+                        if (r.id === athlete.id) {
+                            r.name = athlete.name;
+                        }
+                    });
+                }
+            });
+        });
+
+        // Mass start uses ID references, so it picks up the new name automatically on render.
+
+        saveToStorage();
+        renderCurrentTab();
+    }
 }
 
 function openAthleteModal() {
@@ -969,15 +1014,24 @@ function renderRules() {
         <h4 class="mt-2" style="text-transform:capitalize">${g} (Cap: ${config.TEAM_CAP[g]})</h4>
         <div class="table-container">
             <table class="data-table">
-                <thead><tr><th>Distance</th><th>Quota</th><th>Trials Spots</th><th>Protected/Pre-Nom</th><th>SOQC Ranks (Priority)</th></tr></thead>
+                <thead><tr><th>Distance</th><th>Quota</th><th>Trials Spots</th><th>Protected/Direct</th><th>SOQC Ranks (Priority)</th></tr></thead>
                 <tbody>
                     ${Object.entries(quotas).map(([dist, q]) => `
                         <tr>
                             <td><strong>${dist}</strong></td>
                             <td>${q.quota}</td>
                             <td>${q.trialsSpots}</td>
-                            <td>${q.preNominated.length ? `<span class="badge" style="background:#d9534f">${q.preNominated.join(', ')}</span>` : '-'}</td>
-                            <td>${q.soqcRanks ? q.soqcRanks.join(', ') : '-'}</td>
+                            <td>${dist === 'team_pursuit'
+            ? '<span class="badge" style="background:#d9534f">Team Pursuit</span>'
+            : (q.preNominated.length ? q.preNominated.map(name => {
+                // Special visual handling for known non-protected nominations
+                const isCasey = name.includes('Casey');
+                const label = isCasey ? `${name} (Rank ${q.soqcRanks[0]})` : `${name} (Protected)`;
+                const color = isCasey ? '#f0ad4e' : '#d9534f'; // Orange for rank-based, Red for protected
+                return `<span class="badge" style="background:${color}">${label}</span>`;
+            }).join(' ') : '-')
+        }</td>
+                            <td>${dist === 'team_pursuit' ? `${q.soqcRanks[0]} ➝ Protected` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -1010,6 +1064,60 @@ function renderRules() {
             <h3>Terminology</h3>
             <p><small><strong>SOQC:</strong> Special Olympic Qualification Classification. Defines the priority of each quota spot earned internationally.</small></p>
         </div>
+        </div>
+
+        <div class="card mt-2">
+            <h3>📜 Selection Process Outline</h3>
+            <div style="text-align: left; padding: 0 10px; color: #ccc; line-height: 1.6;">
+                <p><strong>Team Size:</strong> Maximum 9 Men / 9 Women (Dependent on earned Quota spots).</p>
+                
+                <h4 style="color: #D4AF37; margin-top: 15px;">How to Qualify</h4>
+                <ul style="list-style-type: none; padding-left: 10px;">
+                    <li style="margin-bottom: 8px;"><strong>1. Direct Qualification:</strong> Athletes who medal at Worlds & have top Fall World Cup results.</li>
+                    <li style="margin-bottom: 8px;"><strong>2. Olympic Trials:</strong> Top finishers at the Trials in Milwaukee (Jan 2-5, 2026) fill remaining spots.</li>
+                    <li style="margin-bottom: 8px;"><strong>3. Mass Start:</strong> Based on <strong>Best 3 of 4</strong> races (2 Fall World Cups + 2 Trials races). Tiebreaker is finest finish at Mass Start #4.</li>
+                    <li style="margin-bottom: 8px;"><strong>4. Team Pursuit:</strong> Up to 2 specialists may be selected via discretion (Priority given to World Cup performers).</li>
+                </ul>
+
+                <h4 style="color: #D4AF37; margin-top: 15px;">Reduction Process (Cutting the Team)</h4>
+                <p>If more athletes qualify than legal spots available:</p>
+                <ul style="list-style-type: none; padding-left: 10px;">
+                    <li style="margin-bottom: 8px;">❌ Athletes are cut based on their <strong>World Cup (SOQC) Ranking</strong> (Lowest rank cut first).</li>
+                    <li style="margin-bottom: 8px;">🔒 <strong>Protected:</strong> Direct Qualifiers and Top Team Pursuit Specialists cannot be cut.</li>
+                </ul>
+                
+                <p style="font-size: 0.8em; margin-top: 20px; text-align: center; opacity: 0.6;">
+                    *This is a simplified summary. Refer to the official USS Selection Procedures for full details.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-2">
+            <h3>🌍 IOC & ISU Qualification Rules</h3>
+            <div style="text-align: left; padding: 0 10px; color: #ccc; line-height: 1.6;">
+                <p><strong>Total Olympic Quota:</strong> 164 Skaters (82 Men / 82 Women) worldwide.</p>
+                
+                <h4 style="color: #61dafb; margin-top: 15px;">Country Limits (NOC Quotas)</h4>
+                <ul style="list-style-type: none; padding-left: 10px;">
+                    <li style="margin-bottom: 8px;"><strong>Max 9:</strong> If a country qualifies a Team Pursuit team AND earns spots in every individual event.</li>
+                    <li style="margin-bottom: 8px;"><strong>Max 8:</strong> If a country qualifies a Team Pursuit team + at least 1 individual spot.</li>
+                    <li style="margin-bottom: 8px;"><strong>Max 7:</strong> Base limit for all other countries.</li>
+                </ul>
+
+                <h4 style="color: #61dafb; margin-top: 15px;">How Spots are Earned (SOQC)</h4>
+                <p>Quotas are earned for the <strong>Country</strong>, not the specific athlete, based on the 2025 Fall World Cups.</p>
+                <ul style="list-style-type: none; padding-left: 10px;">
+                    <li style="margin-bottom: 8px;">📊 <strong>SOQC Points:</strong> Ranking based on World Cup points scored.</li>
+                    <li style="margin-bottom: 8px;">⏱️ <strong>SOQC Times:</strong> Ranking based on fastest times skate at World Cups.</li>
+                </ul>
+
+                <h4 style="color: #61dafb; margin-top: 15px;">Athlete Eligibility</h4>
+                <ul style="list-style-type: none; padding-left: 10px;">
+                    <li>🎂 Born before <strong>July 1, 2008</strong>.</li>
+                    <li>⚡ Must achieve the <strong>ISU Qualifying Time Standard</strong> between July 1, 2025 – Jan 18, 2026.</li>
+                </ul>
+            </div>
+        </div>
     `;
 }
 
@@ -1021,4 +1129,172 @@ function exportData() {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
+}
+
+function toggleAdminMode() {
+    if (!appState.isAdmin) {
+        const password = prompt("Enter Admin Password:");
+        if (password === "admin123") { // Simple protection
+            appState.isAdmin = true;
+            document.body.classList.add('admin-mode');
+            document.getElementById('admin-login-btn').innerText = "🔓 Admin Active";
+            alert("Admin Mode Unlocked");
+        } else {
+            alert("Incorrect Password");
+        }
+    } else {
+        appState.isAdmin = false;
+        document.body.classList.remove('admin-mode');
+        document.getElementById('admin-login-btn').innerText = "🔒 Admin";
+        // If on a hidden tab, switch to dashboard
+        if (['events', 'athletes'].includes(appState.currentTab)) {
+            appState.currentTab = 'dashboard';
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-tab="dashboard"]').classList.add('active');
+        }
+    }
+    renderCurrentTab();
+}
+
+function openShareModal(athleteName) {
+    const gender = appState.viewGender;
+    const rosterData = calculateReduction(gender).roster;
+    const athlete = rosterData.find(a => a.name === athleteName);
+
+    if (!athlete) return;
+
+    // Populate Modal
+    document.getElementById('share-athlete-name').innerText = athlete.name;
+    const eventsList = document.getElementById('share-athlete-events');
+    eventsList.innerHTML = athlete.events.map(e => {
+        let label = e;
+        if (e === 'TpSpec') label = 'Team Pursuit';
+        if (e === 'mass_start') label = 'Mass Start';
+        return `<span>${label}</span>`;
+    }).join('');
+
+    document.getElementById('share-overlay').style.display = 'flex';
+}
+
+function closeShareModal() {
+    document.getElementById('share-overlay').style.display = 'none';
+}
+
+function downloadShareCard() {
+    const element = document.getElementById('capture-target');
+    const btn = document.querySelector('.share-download-btn');
+    btn.innerText = 'Generating...';
+
+    // Using toBlob with URL.createObjectURL is often more reliable than dataURIs for downloads
+    html2canvas(element, { scale: 3, backgroundColor: "#000000", useCORS: true }).then(canvas => {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                alert('Image generation failed (empty data).');
+                btn.innerText = 'Error';
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const filename = `TeamUSA_${document.getElementById('share-athlete-name').innerText.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
+
+            link.download = filename;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+            btn.innerText = '⬇️ Download Image';
+        }, 'image/jpeg', 0.95);
+    }).catch(err => {
+        console.error("Capture Error:", err);
+        alert('Error generating image. Check console.');
+        btn.innerText = 'Error';
+    });
+}
+
+// =============================================================================
+// SHARE APP FEATURE
+// =============================================================================
+async function shareApp() {
+    // Detect if running locally
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let urlToShare = window.location.href;
+
+    if (isLocal) {
+        // Warning for the admin/user testing this feature
+        const usePlaceholder = confirm(
+            "⚠️ You are sharing from Localhost.\n\n" +
+            "The link 'localhost' only works on YOUR computer. If you share this email/text, others won't be able to open it.\n\n" +
+            "Click OK to share a PLACEHOLDER Public URL instead (for testing).\n" +
+            "Click Cancel to allow sharing the Localhost link anyway."
+        );
+
+        if (usePlaceholder) {
+            urlToShare = "https://olympic-trials-tracker.vercel.app"; // Update this after actual deployment
+        }
+    }
+
+    const shareData = {
+        title: '2026 U.S. Olympic Trials Tracker',
+        text: 'Check out the official 2026 U.S. Olympic Trials Qualification Tracker! Follow the standings live here:',
+        url: urlToShare
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.log('Share canceled or failed', err);
+        }
+    } else {
+        // Fallback to clipboard
+        try {
+            await navigator.clipboard.writeText(urlToShare);
+            showToast('Link copied to clipboard! 📋');
+        } catch (err) {
+            console.error('Failed to copy', err);
+            prompt('Copy this link:', urlToShare);
+        }
+    }
+}
+
+function showToast(message) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.style.cssText = `
+        background: rgba(40, 167, 69, 0.9);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        margin-top: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        backdrop-filter: blur(5px);
+        font-weight: 500;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    toast.innerHTML = `<span>${message}</span>`;
+
+    container.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(0)';
+    });
+
+    // Remove after delay
+    setTimeout(() => {
+        toast.style.transform = 'translateX(120%)';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
 }

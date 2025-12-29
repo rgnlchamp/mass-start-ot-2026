@@ -8,6 +8,16 @@
     *   **Status**: Usually "Finished". Change if they were Lapped, DNF, etc.
     *   **Pos**: Their finish position (1, 2, 3...).
     *   **Time**: Their official time (e.g., `8.15,33`).
+## 🔒  Admin Mode
+The application now launches in **Public Mode** by default, which is read-only.
+- **To Unlock Editing:** Scroll to the bottom footer and click the **"🔒 Admin"** button.
+- **Password:** The default password is `admin123`.
+- **Features:** Unlocking Admin Mode reveals the "Event Entry" and "Athletes" tabs, plus "Edit/Delete" buttons.
+
+## 🏁  Getting Started
+1. **Open the App:** Double-click the `Olympic_Trials_Scoring` shortcut on your Desktop.
+2. **Unlock Admin:** Enter the password to start adding results.
+3. **Add Athletes:** Go to the **Athletes** tab to manage your roster or edit names.
 5.  **Save**: Click the **Save Race Results** button at the bottom.
 
 ## 2. Print & Share

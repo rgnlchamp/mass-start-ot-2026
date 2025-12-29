@@ -11,8 +11,8 @@ const OLYMPIC_CONFIG = {
     // US Men are WC Rank 1 -> Converted Rank 1 (Protected)
     // US Women are WC Rank 3 -> Converted Rank 1 (Protected)
     TP_CONVERSION: {
-        men: 1,
-        women: 1
+        men: 0,
+        women: 0
     },
     men: {
         '500m': {
@@ -56,7 +56,7 @@ const OLYMPIC_CONFIG = {
         },
         // TP is discretionary, but we need to track it for "Specialists"
         'team_pursuit': {
-            quota: 1,
+            quota: 3,
             preNominated: [],
             soqcRanks: [1], // US Men Rank 1
             trialsSpots: 2, // Up to 2 specialists can be named logic-wise
@@ -102,7 +102,7 @@ const OLYMPIC_CONFIG = {
             isMassStartPoints: true
         },
         'team_pursuit': {
-            quota: 1,
+            quota: 3,
             preNominated: [],
             soqcRanks: [3], // US Women Rank 3
             trialsSpots: 2,
@@ -110,3 +110,4 @@ const OLYMPIC_CONFIG = {
         }
     }
 };
+
