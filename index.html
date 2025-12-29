@@ -33,11 +33,11 @@
                 </div>
                 <nav class="nav-tabs">
                     <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
+                    <button class="nav-tab" data-tab="olympic"
+                        onclick="appState.currentTab='olympic'; renderCurrentTab()">Olympic Team</button>
+                    <button class="nav-tab" data-tab="events">⏱️ Event Entry</button>
                     <button class="nav-tab" data-tab="athletes">👤 Athletes</button>
-                    <button class="nav-tab" data-tab="races">🏁 Race Entry</button>
-                    <button class="nav-tab" data-tab="results">🏆 Results</button>
-                    <button class="nav-tab" data-tab="olympic">🥇 Olympic Selection</button>
-                    <button class="nav-tab" data-tab="help">📖 User Guide</button>
+                    <button class="nav-tab" data-tab="help">📖 Rules & Info</button>
                 </nav>
             </div>
         </header>
@@ -60,6 +60,7 @@
             Olympic Trials</p>
     </div>
     <script src="preload_data.js"></script>
+    <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 
