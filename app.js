@@ -1537,18 +1537,101 @@ function showSkatersToWatch(gender, dist) {
         background: rgba(0,0,0,0.8); z-index: 10000;
         display: flex; align-items: center; justify-content: center;
     `;
+
+    // Add Download Button to header
     modal.innerHTML = `
-        <div style="background: #1a1a2e; border-radius: 15px; padding: 25px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: #D4AF37;">👀 ${genderLabel} ${distLabel} - Season's Best</h3>
-                <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer;">&times;</button>
+        <div style="background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color: #D4AF37; font-size: 1.1rem;">👀 ${genderLabel} ${distLabel}</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    ${!data.note ? `<button onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.8rem; padding: 4px 10px;">📸 Insta Post</button>` : ''}
+                    <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+                </div>
             </div>
-            <h4 style="margin: 0 0 15px 0; color: #888; font-weight: normal;">Skaters to Watch</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                 <h4 style="margin: 0; color: #888; font-weight: normal; font-size: 0.9rem;">Skaters to Watch</h4>
+                 <span style="color: #666; font-size: 0.8rem;">Season Best</span>
+            </div>
+           
+            <style>
+                #skaters-modal .data-table td, #skaters-modal .data-table th { padding: 6px 8px; font-size: 0.9rem; }
+                #skaters-modal .data-table tr:last-child td { border-bottom: none; }
+            </style>
             ${content}
         </div>
     `;
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     document.body.appendChild(modal);
+}
+
+function downloadSkatersImage(gender, dist) {
+    const data = SKATERS_TO_WATCH[gender]?.[dist];
+    if (!data || data.note) return;
+
+    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
+    const distLabel = dist === 'team_pursuit' ? 'TEAM PURSUIT' : dist.toUpperCase();
+
+    // Create a container specifically for the image capture (off-screen but visible to html2canvas)
+    const exportContainer = document.createElement('div');
+    exportContainer.style.cssText = `
+        position: fixed; top: 0; left: 0;
+        width: 1080px; height: 1350px; /* Instagram Portrait 4:5 */
+        background: radial-gradient(circle at top, #1a1a2e, #000);
+        color: white; font-family: 'Segoe UI', sans-serif;
+        padding: 60px; box-sizing: border-box;
+        z-index: -1; display: flex; flex-direction: column;
+    `;
+
+    exportContainer.innerHTML = `
+        <div style="text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 25px; margin-bottom: 30px;">
+            <div style="font-size: 32px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">Olympic Trials 2026</div>
+            <h1 style="font-size: 90px; margin: 5px 0 10px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>${distLabel}</h1>
+            <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+                <div style="background: #D4AF37; color: #000; padding: 5px 20px; font-weight: bold; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;">Skaters to Watch</div>
+                <div style="color: #D4AF37; font-size: 22px; text-transform: uppercase; letter-spacing: 2px; border: 1px solid #D4AF37; padding: 4px 20px;">Season Bests</div>
+            </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-start;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                ${data.skaters.slice(0, 10).map((s, i) => `
+                    <tr style="background: rgba(255,255,255,0.05); font-size: 32px;">
+                        <td style="padding: 10px 25px; font-weight: 900; color: #D4AF37; width: 60px;">${s.rank}</td>
+                        <td style="padding: 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
+                        <td style="padding: 10px 25px; text-align: right; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${s.time}</td>
+                        <td style="padding: 10px; width: 80px; text-align: right;">
+                            ${s.notes ? `<span style="background: #D4AF37; color: #000; font-size: 16px; padding: 2px 8px; border-radius: 4px; font-weight: bold;">${s.notes}</span>` : ''}
+                        </td>
+                    </tr>
+                `).join('')}
+            </table>
+        </div>
+
+        <div style="text-align: center; margin-top: auto; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 28px; font-weight: bold; color: #D4AF37;">@SALTYGOLDSUPPLY</div>
+            <div style="font-size: 18px; color: #666; margin-top: 5px;">OFFICIAL UNOFFICIAL OLYMPIC TRACKER</div>
+        </div>
+    `;
+
+    document.body.appendChild(exportContainer);
+    showToast('Generating high-res graphic... 🎨');
+
+    html2canvas(exportContainer, {
+        scale: 1, // Already set to high res dimensions
+        useCORS: true,
+        backgroundColor: '#000'
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `SkatersToWatch_${gender}_${dist}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        document.body.removeChild(exportContainer);
+        showToast('Image downloaded! 📸');
+    }).catch(err => {
+        console.error(err);
+        showToast('Error generating image');
+        document.body.removeChild(exportContainer);
+    });
 }
 
 function exportData() {
