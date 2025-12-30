@@ -38,14 +38,18 @@ const SPRINT_POINTS = {
     10: { intermediate: [3, 2, 1], final: [30, 20, 10, 4, 2, 1], intermediateLaps: [4, 7] }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    initializeState();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Data Manager
+    if (typeof DataManager !== 'undefined') {
+        DataManager.init();
+    }
+    await initializeState();
     setupNavigation();
     updateBranding();
     renderCurrentTab();
 });
 
-function initializeState() {
+async function initializeState() {
     ['women', 'men'].forEach(gender => {
         if (!appState.events[gender]) appState.events[gender] = {};
         Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
@@ -54,14 +58,21 @@ function initializeState() {
             }
         });
     });
-    loadFromStorage();
+    await loadFromStorage();
 }
 
-function loadFromStorage() {
+async function loadFromStorage() {
     try {
-        const saved = localStorage.getItem('olympicTrials_v1');
-        if (saved) {
-            const data = JSON.parse(saved);
+        // Use DataManager to load (from Cloud or Local)
+        let data = null;
+        if (typeof DataManager !== 'undefined') {
+            data = await DataManager.load();
+        } else {
+            const saved = localStorage.getItem('olympicTrials_v1');
+            if (saved) data = JSON.parse(saved);
+        }
+
+        if (data) {
             appState.athletes = data.athletes || [];
             appState.msRaces = data.msRaces || appState.msRaces;
 
@@ -75,6 +86,7 @@ function loadFromStorage() {
                 });
             }
         } else {
+            // Legacy Migration (Local Only usually)
             const legacy = localStorage.getItem('massStartData_v2');
             if (legacy) {
                 const lData = JSON.parse(legacy);
@@ -105,11 +117,17 @@ function loadFromStorage() {
 }
 
 function saveToStorage() {
-    localStorage.setItem('olympicTrials_v1', JSON.stringify({
+    const data = {
         athletes: appState.athletes,
         msRaces: appState.msRaces,
         events: appState.events
-    }));
+    };
+
+    if (typeof DataManager !== 'undefined') {
+        DataManager.save(data);
+    } else {
+        localStorage.setItem('olympicTrials_v1', JSON.stringify(data));
+    }
 }
 
 function setupNavigation() {
