@@ -1550,14 +1550,38 @@ function showSkatersToWatch(gender, dist) {
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                  <h4 style="margin: 0; color: #888; font-weight: normal; font-size: 0.9rem;">Skaters to Watch</h4>
-                 <span style="color: #666; font-size: 0.8rem;">Season Best</span>
             </div>
            
             <style>
                 #skaters-modal .data-table td, #skaters-modal .data-table th { padding: 6px 8px; font-size: 0.9rem; }
                 #skaters-modal .data-table tr:last-child td { border-bottom: none; }
             </style>
-            ${content}
+            
+            <table class="data-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Athlete</th>
+                        <th style="width:100px;">SEASON BEST</th>
+                        <th style="width:50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.skaters.map(s => `
+                        <tr>
+                            <td>${s.rank}</td>
+                            <td style="font-weight:bold;">
+                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ↗</a>` : s.name}
+                            </td>
+                            <td><strong>${s.time}</strong></td>
+                            <td>${s.notes ? '<span style="color:#D4AF37; font-size:11px;">' + s.notes + '</span>' : ''}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <p style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
+                Season Bests 2025-26 | Source: speedskatingresults.com
+            </p>
         </div>
     `;
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
@@ -1592,15 +1616,15 @@ function downloadSkatersImage(gender, dist) {
             </div>
         </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-start;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 10px;">
                 ${data.skaters.slice(0, 10).map((s, i) => `
-                    <tr style="background: rgba(255,255,255,0.05); font-size: 32px;">
-                        <td style="padding: 10px 25px; font-weight: 900; color: #D4AF37; width: 60px;">${s.rank}</td>
-                        <td style="padding: 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
-                        <td style="padding: 10px 25px; text-align: right; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${s.time}</td>
-                        <td style="padding: 10px; width: 80px; text-align: right;">
-                            ${s.notes ? `<span style="background: #D4AF37; color: #000; font-size: 16px; padding: 2px 8px; border-radius: 4px; font-weight: bold;">${s.notes}</span>` : ''}
+                    <tr style="background: rgba(255,255,255,0.05); font-size: 30px;">
+                        <td style="padding: 12px 25px; font-weight: 900; color: #D4AF37; width: 60px;">${s.rank}</td>
+                        <td style="padding: 12px; font-weight: 600;">${s.name.toUpperCase()}</td>
+                        <td style="padding: 12px 25px; text-align: right; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${s.time}</td>
+                        <td style="padding: 12px 25px 12px 0; width: 100px; text-align: right;">
+                            ${s.notes ? `<span style="background: #D4AF37; color: #000; font-size: 16px; padding: 4px 10px; border-radius: 4px; font-weight: bold; white-space: nowrap; display: inline-block;">${s.notes}</span>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -1608,8 +1632,8 @@ function downloadSkatersImage(gender, dist) {
         </div>
 
         <div style="text-align: center; margin-top: auto; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-size: 28px; font-weight: bold; color: #D4AF37;">@SALTYGOLDSUPPLY</div>
-            <div style="font-size: 18px; color: #666; margin-top: 5px;">OFFICIAL UNOFFICIAL OLYMPIC TRACKER</div>
+            <div style="font-size: 42px; font-weight: 900; color: #D4AF37; letter-spacing: 1px;">@SALTYGOLDSUPPLY</div>
+            <div style="font-size: 20px; color: #888; margin-top: 5px; letter-spacing: 3px; font-weight: 300;">WWW.SALTYGOLDSUPPLY.COM</div>
         </div>
     `;
 
@@ -1621,17 +1645,47 @@ function downloadSkatersImage(gender, dist) {
         useCORS: true,
         backgroundColor: '#000'
     }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `SkatersToWatch_${gender}_${dist}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        // Remove container immediately
         document.body.removeChild(exportContainer);
-        showToast('Image downloaded! 📸');
+
+        canvas.toBlob(blob => {
+            const fileName = `SkatersToWatch_${gender}_${dist}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            // Detect Mobile Device (Simple check)
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // SMART SHARE: Only use native sharing on Mobile
+            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: 'Skaters to Watch',
+                    text: 'Check out the Season Bests for the Olympic Trials! 🇺🇸⛸️'
+                })
+                    .then(() => showToast('Shared successfully! 🚀'))
+                    .catch((error) => {
+                        console.log('Error sharing:', error);
+                        // Fallback if user cancels or share fails
+                        saveAsFile(blob, fileName);
+                    });
+            } else {
+                // DESKTOP: Always Download
+                saveAsFile(blob, fileName);
+            }
+        });
     }).catch(err => {
         console.error(err);
         showToast('Error generating image');
-        document.body.removeChild(exportContainer);
+        if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
     });
+}
+
+function saveAsFile(blob, fileName) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    showToast('Image downloaded! 📸');
 }
 
 function exportData() {
