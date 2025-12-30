@@ -24,7 +24,7 @@
     <div class="app-container">
         <header class="header">
             <div class="header-content">
-                <div class="logo-section">
+                <div class="logo-section" onclick="switchToTab('dashboard')" style="cursor: pointer;">
                     <div class="usa-badge"><span>USA</span></div>
                     <div class="title-group">
                         <h1>2026 U.S. Olympic Team Trials</h1>
@@ -34,7 +34,7 @@
                 <nav class="nav-tabs">
                     <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
                     <button class="nav-tab" data-tab="olympic"
-                        onclick="appState.currentTab='olympic'; renderCurrentTab()">Olympic Team</button>
+                        onclick="appState.currentTab='olympic'; renderCurrentTab()">The Team</button>
                     <button class="nav-tab admin-only" id="tab-events" data-tab="events">⏱️ Event Entry</button>
                     <button class="nav-tab admin-only" id="tab-athletes" data-tab="athletes">👤 Athletes</button>
                     <button class="nav-tab" data-tab="help">📖 Rules & Info</button>
@@ -73,12 +73,9 @@
             </p>
 
             <div id="capture-target" class="ig-card">
-                <div class="ig-header">
-                    <span class="ig-year">2026</span>
-                    <span class="ig-title">TEAM USA</span>
-                </div>
+                <!-- Header Removed -->
                 <div class="ig-content">
-                    <div class="ig-qualified-label">OFFICIALLY QUALIFIED</div>
+                    <div class="ig-qualified-label">CONGRATULATIONS TO THE OFFICIALLY UNOFFICIAL TEAM MEMBER</div>
                     <h1 id="share-athlete-name">ATHLETE NAME</h1>
                     <div class="ig-events-label">EVENTS</div>
                     <div id="share-athlete-events" class="ig-events-list">

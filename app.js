@@ -41,6 +41,7 @@ const SPRINT_POINTS = {
 document.addEventListener('DOMContentLoaded', () => {
     initializeState();
     setupNavigation();
+    updateBranding();
     renderCurrentTab();
 });
 
@@ -172,8 +173,8 @@ function renderDashboard() {
             <div class="stat-card">
                 <div class="stat-icon">🦅</div>
                 <div class="stat-info">
-                    <span class="stat-value">Team USA</span>
-                    <span class="stat-label">Olympic Trials</span>
+                    <span class="stat-value">${getBranding('TEAM_NAME')}</span>
+                    <span class="stat-label">${getBranding('SHORT_EVENT_NAME')}</span>
                 </div>
             </div>
              <div class="stat-card">
@@ -255,7 +256,7 @@ function renderOlympicTeamTracker() {
                     <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
                         onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
                 </div>
-                <h2>2026 Olympic Team Tracker</h2>
+                <h2>${getBranding('TRACKER_TITLE')}</h2>
             </div>
             
             <!-- DASHBOARD SUMMARY -->
@@ -1045,94 +1046,195 @@ function athleteOptions(list, ph) {
 function renderRules() {
     const config = OLYMPIC_CONFIG;
 
+    // Helper to render Reduction Matrix/Path
+    const renderReductionMatrix = (g, quotas) => {
+        // 1. Gather all spots with SOQC ranks
+        let allSpots = [];
+
+        // Define protected spots (which index is protected for which distance)
+        const protectedIndices = g === 'women'
+            ? { '500m': [0], 'mass_start': [0] }
+            : { '500m': [0], '1000m': [0], '1500m': [0], 'mass_start': [0] };
+
+        Object.entries(quotas).forEach(([dist, q]) => {
+            if (q.soqcRanks && dist !== 'team_pursuit') {
+                q.soqcRanks.forEach((rank, i) => {
+                    // Check if this specific spot index is protected
+                    const isProtected = protectedIndices[dist] && protectedIndices[dist].includes(i);
+
+                    if (!isProtected) {
+                        allSpots.push({
+                            distance: dist.replace(/_/g, ' ').toUpperCase(),
+                            spotName: i === 0 ? '1st Spot' : (i === 1 ? '2nd Spot' : '3rd Spot'),
+                            rank: rank
+                        });
+                    }
+                });
+            }
+        });
+
+        // 2. Sort by Rank High -> Low (Highest number = Worst rank = First to cut)
+        // Tie-breaker: If ranks equal, sort alphabetically (e.g. 10000M comes before 5000M, so 10k is cut first)
+        allSpots.sort((a, b) => {
+            if (b.rank !== a.rank) return b.rank - a.rank;
+            return a.distance.localeCompare(b.distance);
+        });
+
+        // 3. Render
+        return `
+            <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+                <h5 style="color: #ef4444; margin-bottom: 15px; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.5em">✂️</span> 
+                    <div>
+                        Reduction Order / The "Chopping Block"
+                        <div style="font-size:0.7em; color:#aaa; font-weight:normal;">If Team Size > Cap, spots are cut in this order until we reach <strong>${g === 'women' ? '6' : '8'} athletes</strong>.</div>
+                    </div>
+                </h5>
+                <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
+                    ${allSpots.map((spot, i) => `
+                        <div style="min-width: 120px; background: ${i === 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; 
+                                    border: 1px solid ${i === 0 ? '#ef4444' : 'rgba(255,255,255,0.1)'}; 
+                                    padding: 10px; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 0.8em; color: #888;">#${i + 1} to Cut</div>
+                            <div style="font-weight: bold; color: ${i === 0 ? '#ef4444' : '#fff'}; margin: 5px 0;">${spot.distance}</div>
+                            <div style="font-size: 0.85em; color: #aaa;">${spot.spotName}</div>
+                            <div style="font-size: 1.2em; font-weight: 900; color: #D4AF37; margin-top: 5px;">${spot.rank}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    };
+
     // Helper to render gender table
     const renderTable = (g, quotas) => `
-        <h4 class="mt-2" style="text-transform:capitalize">${g} (Cap: ${config.TEAM_CAP[g]})</h4>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+            <h4 style="text-transform:capitalize; color: #D4AF37; margin:0;">${g} Results</h4>
+        </div>
+        
         <div class="table-container">
-            <table class="data-table">
-                <thead><tr><th>Distance</th><th>Quota</th><th>Trials Spots</th><th>Protected/Direct</th><th>SOQC Ranks (Priority)</th></tr></thead>
+            <table class="data-table" style="font-size: 0.95em;">
+                <thead style="background: rgba(255,255,255,0.02);">
+                    <tr>
+                        <th style="padding: 12px;">Event</th>
+                        <th style="text-align:center;">Total Spots</th>
+                        <th>Already Qualified</th>
+                        <th style="text-align:center; color:#D4AF37; border-left: 1px solid #333; border-right: 1px solid #333;">Spots available<br>at Trials</th>
+                        <th style="font-size:0.9em; color:#aaa;">Cut Priority (SOQC)</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    ${Object.entries(quotas).map(([dist, q]) => `
-                        <tr>
-                            <td><strong>${dist}</strong></td>
-                            <td>${q.quota}</td>
-                            <td>${q.trialsSpots}</td>
-                            <td>${dist === 'team_pursuit'
-            ? '<span class="badge" style="background:#d9534f">Team Pursuit</span>'
-            : (q.preNominated.length ? q.preNominated.map(name => {
-                // Special visual handling for known non-protected nominations
-                const isCasey = name.includes('Casey');
-                const label = isCasey ? `${name} (Rank ${q.soqcRanks[0]})` : `${name} (Protected)`;
-                const color = isCasey ? '#f0ad4e' : '#d9534f'; // Orange for rank-based, Red for protected
-                return `<span class="badge" style="background:${color}">${label}</span>`;
-            }).join(' ') : '-')
-        }</td>
-                            <td>${dist === 'team_pursuit' ? `${q.soqcRanks[0]} ➝ Protected` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}</td>
+                    ${Object.entries(quotas).map(([dist, q]) => {
+        // Format Distance Name (e.g. mass_start -> Mass Start)
+        const distName = dist.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+        // Check if 0 spots
+        const isZero = q.quota === 0;
+        const rowStyle = isZero ? 'opacity: 0.4;' : '';
+
+        // Team Pursuit Logic
+        const isTP = dist === 'team_pursuit';
+        const spotsAvailable = isTP ? '<span style="font-size:0.7em; letter-spacing:1px; text-transform:uppercase;">Discretionary</span>' : q.trialsSpots;
+
+        return `
+                        <tr style="${rowStyle}">
+                            <td style="font-weight:bold; padding: 12px;">${distName}</td>
+                            <td style="text-align:center; font-size: 1.1em;">${q.quota}</td>
+                            <td>${isTP
+                ? '<span class="badge" style="background:#22c55e; color:black;">Discretionary</span>'
+                : (q.preNominated.length ? q.preNominated.map(name => {
+                    const color = '#22c55e'; // All Green
+                    const text = `${name} ✓`;
+                    return `<span class="badge" style="background:${color}; color:black; margin-right:5px;">${text}</span>`;
+                }).join(' ') : '<span style="color:#666;">-</span>')
+            }</td>
+                            <td style="text-align:center; font-weight:900; color:#D4AF37; font-size: 1.2em; border-left: 1px solid #333; border-right: 1px solid #333; background: rgba(212, 175, 55, 0.05);">
+                                ${spotsAvailable}
+                            </td>
+                            <td style="color:#fff; font-family:monospace; font-size:1.4em; font-weight:bold;">
+                                ${isTP ? `Protected` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}
+                            </td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
+            ${renderReductionMatrix(g, quotas)}
         </div>
     `;
 
     return `
         <div class="section-header">
-            <h2>📖 Rules & Selection Criteria</h2>
-        </div>
-        
-        <div class="card mb-2">
-            <h3>Olympic Selection Procedures Summary</h3>
-            <p><strong>Reduction Process:</strong> If more athletes qualify than the Team Cap allows, athletes are cut based on their SOQC Priority Ranking (lower is better).</p>
-            <ul style="margin-left:20px; margin-top:10px;">
-                <li><strong>Priority 1 (Protected):</strong> Direct Nominees & Team Pursuit Specialists (Top 3 World Rank).</li>
-                <li><strong>Priority N:</strong> Additional qualifiers are ranked by the SOQC rank associated with their quota spot.</li>
-                <li><strong>Mass Start:</strong> 2nd spot is NOT automatically protected; it carries a specific reduction ranking.</li>
-            </ul>
+            <h2>📖 Qualification Guide 2026</h2>
         </div>
 
-        <div class="card">
-            <h3>Quota Configuration</h3>
+        <div class="card" style="border-top: 4px solid #D4AF37;">
+            <h3><span style="background:#D4AF37; color:black; padding:2px 8px; border-radius:4px; font-size:0.8em; margin-right:10px;">USA</span> How to Make ${getBranding('TEAM_NAME')}</h3>
+            <p class="text-muted" style="margin-bottom: 20px;">The process is nuanced, but the goal is simple: Be fast.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">1. Win</div>
+                    <strong style="color: #fff; display:block; margin-bottom:5px;">Finish Top 2 or 3 at Selection</strong>
+                    <p style="font-size: 0.9em; color: #aaa;">Most spots are earned directly by finishing on the podium at the ${getBranding('SHORT_EVENT_NAME')} in Milwaukee.</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">2. Rank</div>
+                    <strong style="color: #fff; display:block; margin-bottom:5px;">Earn a Quota Spot</strong>
+                    <p style="font-size: 0.9em; color: #aaa;">${getBranding('TEAM_NAME')} has a limited number of "tickets" (quotas) for each distance. Often, only the top 2 or 3 finishers get to go.</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">3. Survive</div>
+                    <strong style="color: #fff; display:block; margin-bottom:5px;">Avoid the "Cut"</strong>
+                    <p style="font-size: 0.9em; color: #aaa;">${getBranding('TEAM_NAME')} is capped at <strong>8 Men</strong> and <strong>6 Women</strong>. If more people qualify, the skaters with the lowest "SOQC Rankings" get cut.</p>
+                </div>
+            </div>
+
+            <div style="background: rgba(212, 175, 55, 0.1); border: 1px solid #D4AF37; border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 15px;">
+                <div style="font-size: 2em;">🦅</div>
+                <div>
+                    <strong style="color: #D4AF37;">Team Size Limit</strong>
+                    <p style="margin: 0; font-size: 0.9em;">Based on Fall World Cup results, ${getBranding('TEAM_NAME')} is restricted to <strong style="color:white;">8 Men</strong> and <strong style="color:white;">6 Women</strong> for the 2026 Games.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-2">
+            <h3>📊 Detailed Quota Breakdown</h3>
+            <p class="text-muted">Below shows exactly how many spots exist for each distance and who is pre-nominated.</p>
             ${renderTable('women', config.women)}
             ${renderTable('men', config.men)}
         </div>
-        
-        <div class="card mt-2">
-            <h3>Terminology</h3>
-            <p><small><strong>SOQC:</strong> Special Olympic Qualification Classification. Defines the priority of each quota spot earned internationally.</small></p>
-        </div>
-        </div>
 
         <div class="card mt-2">
-            <h3>📜 Selection Process Outline</h3>
-            <div style="text-align: left; padding: 0 10px; color: #ccc; line-height: 1.6;">
-                <p><strong>Team Size:</strong> Based on results from World Cups #1-#4 and Team USA's SOQC rankings, the men have a maximum of 8 Olympic Starting Positions and the Women have a maximum of 6 Olympic Starting Positions.</p>
-                
-                <h4 style="color: #D4AF37; margin-top: 15px;">How to Qualify</h4>
-                <ul style="list-style-type: none; padding-left: 10px;">
-                    <li style="margin-bottom: 8px;"><strong>1. Direct Qualification:</strong> Athletes who medal at Worlds & have top Fall World Cup results.</li>
-                    <li style="margin-bottom: 8px;"><strong>2. Olympic Trials:</strong> Top finishers at the Trials in Milwaukee (Jan 2-5, 2026) fill remaining spots.</li>
-                    <li style="margin-bottom: 8px;"><strong>3. Mass Start:</strong> Based on <strong>Best 3 of 4</strong> races (2 Fall World Cups + 2 Trials races). Tiebreaker is finest finish at Mass Start #4.</li>
-                    <li style="margin-bottom: 8px;"><strong>4. Team Pursuit:</strong> Up to 2 specialists may be selected via discretion (Priority given to World Cup performers).</li>
-                </ul>
-
-                <h4 style="color: #D4AF37; margin-top: 15px;">Reduction Process (Cutting the Team)</h4>
-                <p>If more athletes qualify than legal spots available:</p>
-                <ul style="list-style-type: none; padding-left: 10px;">
-                    <li style="margin-bottom: 8px;">❌ Athletes are cut based on their <strong>World Cup (SOQC) Ranking</strong> (Lowest rank cut first).</li>
-                    <li style="margin-bottom: 8px;">🔒 <strong>Protected:</strong> Direct Qualifiers and Top Team Pursuit Specialists cannot be cut.</li>
-                </ul>
-                
-                <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                    <h4 style="color: #ccc; font-size: 0.9em; margin-bottom: 10px;">Official Documents</h4>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/bltcd66ae352ae96e83/694b3ece1e351c40b71969db/LT_Regs_25-26_Final_v2.2.pdf" target="_blank" style="text-decoration:none;">
-                            <button class="btn btn-outline-primary" style="width:100%; text-align:left;">📄 USS Rules & Regulations 2025-26 ↗</button>
-                        </a>
-                        <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/blt328a2be74a7640b7/69248cbe33936a0790e5d9ce/Athlete_Selection_Procedures_-_USS_Long_Track_-_Amendment_2_SIGNED.pdf" target="_blank" style="text-decoration:none;">
-                            <button class="btn btn-outline-primary" style="width:100%; text-align:left;">📄 Olympic Selection Procedures (Amendment 2) ↗</button>
-                        </a>
+            <h3>📜 Official Rules & Documentation</h3>
+            <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                 <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/bltcd66ae352ae96e83/694b3ece1e351c40b71969db/LT_Regs_25-26_Final_v2.2.pdf" target="_blank" style="text-decoration:none;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+                        <span style="font-size: 1.5em;">📄</span>
+                        <div>
+                            <strong style="display:block; color:#fff;">USS Rules 2025-26</strong>
+                            <span style="font-size: 0.8em; color: #888;">Complete Regulations PDF</span>
+                        </div>
                     </div>
-                </div>
+                </a>
+                <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/blt328a2be74a7640b7/69248cbe33936a0790e5d9ce/Athlete_Selection_Procedures_-_USS_Long_Track_-_Amendment_2_SIGNED.pdf" target="_blank" style="text-decoration:none;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
+                        <span style="font-size: 1.5em;">⚖️</span>
+                        <div>
+                            <strong style="display:block; color:#fff;">Selection Procedures</strong>
+                            <span style="font-size: 0.8em; color: #888;">Official Olympic Criteria</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.9em;">
+                <h4 style="color: #666; margin-bottom: 10px;">Technical Terminology</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">SOQC (Special Olympic Qualification Classification):</strong> The "priority ranking" of every quota spot. Lower number = Safer from being cut.</li>
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Direct Qualification:</strong> Skaters who medaled at World Championships are "Protected" and cannot be cut.</li>
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Team Pursuit Specialists:</strong> Up to 2 skaters can be selected specifically for TP, but they count towards the team cap.</li>
+                </ul>
             </div>
         </div>
 
@@ -1141,27 +1243,26 @@ function renderRules() {
             <div style="text-align: left; padding: 0 10px; color: #ccc; line-height: 1.6;">
                 <p><strong>Total Olympic Quota:</strong> 164 Skaters (82 Men / 82 Women) worldwide.</p>
                 
-                <h4 style="color: #61dafb; margin-top: 15px;">Country Limits (NOC Quotas)</h4>
+                <h4 style="color: #D4AF37; margin-top: 15px;">Country Limits (NOC Quotas)</h4>
                 <ul style="list-style-type: none; padding-left: 10px;">
                     <li style="margin-bottom: 8px;"><strong>Max 9:</strong> If a country qualifies a Team Pursuit team AND earns spots in every individual event.</li>
                     <li style="margin-bottom: 8px;"><strong>Max 8:</strong> If a country qualifies a Team Pursuit team + at least 1 individual spot.</li>
                     <li style="margin-bottom: 8px;"><strong>Max 7:</strong> Base limit for all other countries.</li>
                 </ul>
 
-                <h4 style="color: #61dafb; margin-top: 15px;">How Spots are Earned (SOQC)</h4>
+                <h4 style="color: #D4AF37; margin-top: 15px;">How Spots are Earned (SOQC)</h4>
                 <p>Quotas are earned for the <strong>Country</strong>, not the specific athlete, based on the 2025 Fall World Cups.</p>
                 <ul style="list-style-type: none; padding-left: 10px;">
                     <li style="margin-bottom: 8px;">📊 <strong>SOQC Points:</strong> Ranking based on World Cup points scored.</li>
                     <li style="margin-bottom: 8px;">⏱️ <strong>SOQC Times:</strong> Ranking based on fastest times skate at World Cups.</li>
                 </ul>
 
-                <h4 style="color: #61dafb; margin-top: 15px;">Athlete Eligibility</h4>
+                <h4 style="color: #D4AF37; margin-top: 15px;">Athlete Eligibility</h4>
                 <ul style="list-style-type: none; padding-left: 10px;">
-                    <li>🎂 Born before <strong>July 1, 2008</strong>.</li>
-                    <li>⚡ Must achieve the <strong>ISU Qualifying Time Standard</strong> between July 1, 2025 – Jan 18, 2026.</li>
+                    <li style="margin-bottom: 8px;"><strong>Age:</strong> Born before July 1, 2010.</li>
+                    <li style="margin-bottom: 8px;"><strong>Times:</strong> Must have skated the ${getBranding('QUALIFIER_NAME')} for their distance.</li>
                 </ul>
             </div>
-        </div>
     `;
 }
 
@@ -1175,7 +1276,7 @@ function renderMassStartStandings() {
     // Filter out athletes with 0 points
     const filteredStandings = standings.filter(s => s.total > 0);
 
-    // Get pre-nominated athletes for this gender's mass start (for qualified badge)
+    // Get pre-nominated athletes for this gender's mass start
     const preNominated = OLYMPIC_CONFIG[gender].mass_start?.preNominated || [];
 
     return `
@@ -1187,8 +1288,8 @@ function renderMassStartStandings() {
                     onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
             </div>
             <div class="btn-group" style="margin-right: 20px;">
-                <button class="btn btn-outline-primary" onclick="shareMsStandingsImage()" title="Share as Image (Instagram)">📸 Instagram</button>
-                <button class="btn btn-outline-primary" onclick="shareMsStandingsPdf()" title="Download PDF">📄 PDF</button>
+                <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">📸 Insta Post</button>
+                <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">📄 PDF</button>
             </div>
             <h2>🏆 Mass Start Series Standings</h2>
         </div>
@@ -1247,106 +1348,106 @@ function shareMsStandingsImage() {
     const gender = appState.viewGender;
     const standings = calculateMassStartStandings(gender);
     const filteredStandings = standings.filter(s => s.total > 0);
-    const genderLabel = gender === 'women' ? "Women's" : "Men's";
+    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
 
-    showToast('Generating Instagram image...');
-
-    // Limit to top 12 for better mobile readability
+    // Limit to top 12
     const displayAthletes = filteredStandings.slice(0, 12);
-    const showingPartial = filteredStandings.length > 12;
 
-    // Fixed larger sizes for 12 or fewer athletes
-    const basePadding = 14;
-    const nameFontSize = 26;
-    const pointsFontSize = 24;
-    const totalFontSize = 28;
-    const headerFontSize = 22;
-
-    // Create a temporary container for the Instagram-formatted image
-    const container = document.createElement('div');
-    container.id = 'instagram-export';
-    container.style.cssText = `
-        position: fixed; left: -9999px; top: 0;
-        width: 1080px; height: 1350px;
-        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-        padding: 40px;
-        box-sizing: border-box;
-        font-family: Arial, sans-serif;
-        color: white;
+    // Create a container specifically for the image capture
+    const exportContainer = document.createElement('div');
+    exportContainer.style.cssText = `
+        position: fixed; top: 0; left: 0;
+        width: 1080px; height: 1350px; /* Instagram Portrait 4:5 */
+        background: radial-gradient(circle at top, #1a1a2e, #000);
+        color: white; font-family: 'Segoe UI', sans-serif;
+        padding: 60px; box-sizing: border-box;
+        z-index: -1; display: flex; flex-direction: column;
     `;
 
-    // Build the content
-    container.innerHTML = `
-        <div style="text-align: center; margin-bottom: 25px;">
-            <div style="font-size: 24px; color: #D4AF37; margin-bottom: 10px;">★ 2026 U.S. OLYMPIC TEAM TRIALS ★</div>
-            <div style="font-size: 48px; font-weight: bold; color: #fff;">🏆 Mass Start Standings</div>
-            <div style="font-size: 32px; color: #D4AF37; margin-top: 10px;">${genderLabel} Overall Points</div>
+    exportContainer.innerHTML = `
+        <div style="text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 15px; margin-bottom: 10px;">
+            <div style="font-size: 30px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">${getBranding('MASS_START_TITLE')}</div>
+            <h1 style="font-size: 70px; margin: 0 0 5px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>MASS START</h1>
+            <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+                <div style="background: #D4AF37; color: #000; padding: 4px 15px; font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">Current Standings</div>
+                <div style="color: #D4AF37; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; border: 1px solid #D4AF37; padding: 3px 15px;">Top ${displayAthletes.length}</div>
+            </div>
         </div>
-        
-        <table style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.1); border-radius: 15px; overflow: hidden;">
-            <thead>
-                <tr style="background: rgba(212,175,55,0.3);">
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">Rank</th>
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37; text-align: left;">Athlete</th>
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R1</th>
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R2</th>
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R3</th>
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">R4</th>
-                    <th style="padding: ${basePadding}px; font-size: ${headerFontSize}px; color: #D4AF37;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${displayAthletes.map((s, i) => {
-        const rank = i + 1;
-        let medalStyle = '';
-        let medalEmoji = '';
-        if (rank === 1) { medalStyle = 'background: linear-gradient(135deg, #FFD700, #FFA500);'; medalEmoji = '🥇'; }
-        if (rank === 2) { medalStyle = 'background: linear-gradient(135deg, #C0C0C0, #A0A0A0);'; medalEmoji = '🥈'; }
-        if (rank === 3) { medalStyle = 'background: linear-gradient(135deg, #CD7F32, #8B4513);'; medalEmoji = '🥉'; }
-        return `
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${nameFontSize}px; font-weight: bold; ${medalStyle}">${medalEmoji}${rank}</td>
-                        <td style="padding: ${basePadding}px; font-size: ${nameFontSize}px; font-weight: bold;">${s.name}</td>
-                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[1] || '-'}</td>
-                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[2] || '-'}</td>
-                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[3] || '-'}</td>
-                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${pointsFontSize}px;">${s.races[4] || '-'}</td>
-                        <td style="padding: ${basePadding}px; text-align: center; font-size: ${totalFontSize}px; font-weight: bold; color: #D4AF37;">${s.total}</td>
-                    </tr>`;
-    }).join('')}
-            </tbody>
-        </table>
-        
-        <div style="position: absolute; bottom: 25px; left: 40px; right: 40px; text-align: center;">
-            ${showingPartial ? '<div style="font-size: 16px; color: #D4AF37; margin-bottom: 6px;">★ Top 12 Shown ★</div>' : ''}
-            <div style="font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 6px;">Best 3 of 4 races count for official selection</div>
-            <div style="font-size: 16px; color: #D4AF37;">Powered by saltygoldsupply.com</div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-start;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 5px;">
+                <thead>
+                    <tr style="font-size: 18px; color: #888; letter-spacing: 2px; text-transform: uppercase;">
+                        <th style="padding: 0 20px; text-align: left; font-weight: normal; width: 50px;">Rank</th>
+                        <th style="padding: 0 10px; text-align: left; font-weight: normal;">Athlete</th>
+                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R1</th>
+                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R2</th>
+                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R3</th>
+                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R4</th>
+                        <th style="padding: 0 25px 0 0; text-align: right; font-weight: normal; width: 80px; color: #D4AF37;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${displayAthletes.map((s, i) => `
+                        <tr style="background: rgba(255,255,255,0.05); font-size: 24px;">
+                            <td style="padding: 6px 20px; font-weight: 900; color: #D4AF37;">${i + 1}</td>
+                            <td style="padding: 6px 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
+                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[1] || '-'}</td>
+                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[2] || '-'}</td>
+                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[3] || '-'}</td>
+                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[4] || '-'}</td>
+                            <td style="padding: 6px 25px 6px 0; text-align: right; font-weight: bold; font-family: monospace; font-size: 30px;">
+                                ${s.total}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 18px; margin-top: 10px; font-style: italic; letter-spacing: 1px;">
+            * Official selection based on best 3 of 4 race results
+        </div>
+
+        <div style="text-align: center; margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 36px; font-weight: 900; color: #D4AF37; letter-spacing: 1px;">@SALTYGOLDSUPPLY</div>
+            <div style="font-size: 18px; color: #888; margin-top: 5px; letter-spacing: 3px; font-weight: 300;">WWW.SALTYGOLDSUPPLY.COM</div>
         </div>
     `;
 
-    document.body.appendChild(container);
+    document.body.appendChild(exportContainer);
+    showToast('Generating high-res graphic... 🎨');
 
-    html2canvas(container, {
-        width: 1080,
-        height: 1350,
+    html2canvas(exportContainer, {
         scale: 1,
-        logging: false
+        useCORS: true,
+        backgroundColor: '#000'
     }).then(canvas => {
+        document.body.removeChild(exportContainer);
         canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const genderShort = gender === 'women' ? 'Women' : 'Men';
-            a.download = `OT2026_MS_Standings_${genderShort}.png`;
-            a.click();
-            URL.revokeObjectURL(url);
-            container.remove();
-            showToast('Instagram image downloaded! 📸');
-        }, 'image/png');
+            const fileName = `OT2026_MS_Standings_${genderLabel}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: 'Mass Start Standings 🏆',
+                    text: `Latest ${genderLabel} Mass Start standings! #OlympicTrials2026`
+                })
+                    .then(() => showToast('Shared successfully! 🚀'))
+                    .catch((error) => {
+                        console.log('Error sharing:', error);
+                        saveAsFile(blob, fileName);
+                    });
+            } else {
+                saveAsFile(blob, fileName);
+            }
+        });
     }).catch(err => {
-        console.error('Error generating image:', err);
-        container.remove();
+        console.error(err);
         showToast('Error generating image');
+        if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
     });
 }
 
@@ -1427,7 +1528,7 @@ function shareMsStandingsPdf() {
         </head>
         <body>
             <div class="header">
-                <div class="header-top">★ 2026 U.S. OLYMPIC TEAM TRIALS ★</div>
+                <div class="header-top">★ ${getBranding('EVENT_NAME').toUpperCase()} ★</div>
                 <div class="header-title">🏆 Mass Start Standings</div>
                 <div class="header-subtitle">${genderLabel} Overall Points</div>
             </div>
@@ -1608,7 +1709,7 @@ function downloadSkatersImage(gender, dist) {
 
     exportContainer.innerHTML = `
         <div style="text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 25px; margin-bottom: 30px;">
-            <div style="font-size: 32px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">Olympic Trials 2026</div>
+            <div style="font-size: 32px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">${getBranding('MASS_START_TITLE')}</div>
             <h1 style="font-size: 90px; margin: 5px 0 10px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>${distLabel}</h1>
             <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
                 <div style="background: #D4AF37; color: #000; padding: 5px 20px; font-weight: bold; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;">Skaters to Watch</div>
@@ -1617,13 +1718,13 @@ function downloadSkatersImage(gender, dist) {
         </div>
 
         <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0 10px;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
                 ${data.skaters.slice(0, 10).map((s, i) => `
-                    <tr style="background: rgba(255,255,255,0.05); font-size: 30px;">
-                        <td style="padding: 12px 25px; font-weight: 900; color: #D4AF37; width: 60px;">${s.rank}</td>
-                        <td style="padding: 12px; font-weight: 600;">${s.name.toUpperCase()}</td>
-                        <td style="padding: 12px 25px; text-align: right; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${s.time}</td>
-                        <td style="padding: 12px 25px 12px 0; width: 100px; text-align: right;">
+                    <tr style="background: rgba(255,255,255,0.05); font-size: 28px;">
+                        <td style="padding: 10px 25px; font-weight: 900; color: #D4AF37; width: 60px;">${s.rank}</td>
+                        <td style="padding: 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
+                        <td style="padding: 10px 25px; text-align: right; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${s.time}</td>
+                        <td style="padding: 10px 25px 10px 0; width: 100px; text-align: right;">
                             ${s.notes ? `<span style="background: #D4AF37; color: #000; font-size: 16px; padding: 4px 10px; border-radius: 4px; font-weight: bold; white-space: nowrap; display: inline-block;">${s.notes}</span>` : ''}
                         </td>
                     </tr>
@@ -1660,7 +1761,7 @@ function downloadSkatersImage(gender, dist) {
                 navigator.share({
                     files: [file],
                     title: 'Skaters to Watch',
-                    text: 'Check out the Season Bests for the Olympic Trials! 🇺🇸⛸️'
+                    text: `Check out the Season Bests for the ${getBranding('SHORT_EVENT_NAME')}! 🇺🇸⛸️`
                 })
                     .then(() => showToast('Shared successfully! 🚀'))
                     .catch((error) => {
@@ -1750,6 +1851,7 @@ function closeShareModal() {
 function downloadShareCard() {
     const element = document.getElementById('capture-target');
     const btn = document.querySelector('.share-download-btn');
+    const originalText = btn.innerText;
     btn.innerText = 'Generating...';
 
     // Using toBlob with URL.createObjectURL is often more reliable than dataURIs for downloads
@@ -1760,19 +1862,32 @@ function downloadShareCard() {
                 btn.innerText = 'Error';
                 return;
             }
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const filename = `TeamUSA_${document.getElementById('share-athlete-name').innerText.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
 
-            link.download = filename;
-            link.href = url;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const filename = `${getBranding('TEAM_NAME').replace(/ /g, '')}_${document.getElementById('share-athlete-name').innerText.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-            // Clean up
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-            btn.innerText = '⬇️ Download Image';
+            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: `${getBranding('TEAM_NAME')} Qualifier 🇺🇸`,
+                    text: `Officially Qualified! ${getBranding('HASHTAG')}`
+                })
+                    .then(() => {
+                        btn.innerText = 'Shared! 🚀';
+                        setTimeout(() => btn.innerText = originalText, 2000);
+                    })
+                    .catch((error) => {
+                        console.log('Error sharing:', error);
+                        // Fallback to download
+                        saveAsFile(blob, filename);
+                        btn.innerText = originalText;
+                    });
+            } else {
+                // Desktop Direct Download
+                saveAsFile(blob, filename);
+                btn.innerText = originalText;
+            }
         }, 'image/jpeg', 0.95);
     }).catch(err => {
         console.error("Capture Error:", err);
@@ -1864,4 +1979,31 @@ function showToast(message) {
             toast.remove();
         }, 300);
     }, 3000);
+}
+
+// =============================================================================
+// BRANDING UPDATE UTILITY
+// =============================================================================
+function updateBranding() {
+    // 1. Page Title
+    document.title = getBranding('EVENT_NAME') + " Tracker";
+
+    // 2. Header Title (in .logo-section)
+    const headerTitle = document.querySelector('.logo-section h1');
+    if (headerTitle) headerTitle.innerText = getBranding('EVENT_NAME');
+
+    // 3. Print Header
+    const printTitle = document.querySelector('.print-title h1');
+    if (printTitle) printTitle.innerText = getBranding('EVENT_NAME');
+
+    // 4. Footer
+    const footerTitle = document.querySelector('.footer-info p');
+    if (footerTitle) footerTitle.innerText = getBranding('TRACKER_TITLE');
+
+    // 5. Share Card (Instagram)
+    const igTitle = document.querySelector('.ig-title');
+    if (igTitle) igTitle.innerText = getBranding('TEAM_NAME').toUpperCase();
+
+    const igFooter = document.querySelector('.ig-footer p');
+    if (igFooter) igFooter.innerText = getBranding('TRACKER_TITLE').toUpperCase();
 }

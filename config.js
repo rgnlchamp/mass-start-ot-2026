@@ -2,6 +2,41 @@
 // Configuration for Olympic Trials & Selection
 // Updated with verified SOQC Ranks and Reduction Rules
 
+// =============================================================================
+// BRANDING CONTROL
+// =============================================================================
+const BRANDING_CONFIG = {
+    // TOGGLE THIS TO TRUE TO REMOVE OLYMPIC TRADEMARKS
+    IS_GENERIC: true,
+
+    OLYMPIC: {
+        EVENT_NAME: "2026 U.S. Olympic Team Trials",
+        SHORT_EVENT_NAME: "Olympic Trials 2026",
+        TEAM_NAME: "Team USA",
+        TEAM_NAME_FULL: "2026 Team USA",
+        QUALIFIER_NAME: "Olympic Qualifying Time (OQT)",
+        TRACKER_TITLE: "2026 Olympic Team Tracker",
+        MASS_START_TITLE: "Olympic Trials 2026",
+        HASHTAG: "#OlympicTrials2026"
+    },
+
+    GENERIC: {
+        EVENT_NAME: "2026 Trials Tracker",
+        SHORT_EVENT_NAME: "2026 Trials",
+        TEAM_NAME: "The Team",
+        TEAM_NAME_FULL: "2026 National Team",
+        QUALIFIER_NAME: "Qualifying Time (QT)",
+        TRACKER_TITLE: "Trials Tracker",
+        MASS_START_TITLE: "2026 Trials",
+        HASHTAG: "#2026Trials"
+    }
+};
+
+function getBranding(key) {
+    const mode = BRANDING_CONFIG.IS_GENERIC ? 'GENERIC' : 'OLYMPIC';
+    return BRANDING_CONFIG[mode][key];
+}
+
 const OLYMPIC_CONFIG = {
     TEAM_CAP: {
         men: 8,

@@ -1,11 +1,12 @@
 :root {
-    --bg-primary: #1a1a2e;
-    /* Midnight Blue */
-    --bg-secondary: #0f0c29;
+    --bg-primary: #0a0a0a;
+    /* True Black/Dark Grey */
+    --bg-secondary: #111111;
     --bg-card: rgba(255, 255, 255, 0.05);
-    /* Glassy */
+    /* Keep Glassy */
     --bg-hover: rgba(255, 255, 255, 0.1);
-    --accent-blue: #302b63;
+    --accent-blue: #333333;
+    /* Neutral instead of blue */
     --accent-red: #dc2743;
     --accent-gold: #D4AF37;
     /* Rich Gold from Image */
@@ -13,7 +14,7 @@
     --text-primary: #ffffff;
     --text-secondary: #cccccc;
     --text-muted: #888888;
-    --border-color: rgba(255, 255, 255, 0.1);
+    --border-color: rgba(255, 255, 255, 0.15);
     --success: #22c55e;
     --warning: #D4AF37;
     --error: #ef4444;
@@ -34,8 +35,8 @@
 
 body {
     font-family: 'Outfit', sans-serif;
-    background: radial-gradient(circle at top center, #1a1a2e 0%, #000000 90%);
-    /* Midnight Gradient */
+    /* Removed Blue Tint, kept premium radial darkness */
+    background: radial-gradient(circle at top center, #222222 0%, #000000 80%);
     background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;
@@ -50,8 +51,8 @@ body {
 
 /* Header */
 .header {
-    background: rgba(15, 12, 41, 0.8);
-    /* Darker midnight */
+    background: rgba(10, 10, 10, 0.9);
+    /* Neutral dark */
     border-bottom: 1px solid var(--border-color);
     padding: 1rem 2rem;
     position: sticky;
@@ -674,6 +675,7 @@ select:focus {
     font-size: 1.5rem;
     background: linear-gradient(90deg, var(--text-primary), var(--accent-blue));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -1151,15 +1153,16 @@ body.admin-mode .admin-only {
 
 .ig-qualified-label {
     color: #D4AF37;
-    font-size: 12px;
-    letter-spacing: 3px;
-    font-weight: 600;
-    margin-bottom: 10px;
-    border: 1px solid #D4AF37;
-    padding: 5px 10px;
+    font-size: 16px;
+    letter-spacing: 4px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    border: 2px solid #D4AF37;
+    padding: 8px 24px;
     display: inline-block;
     align-self: center;
     text-transform: uppercase;
+    background: rgba(212, 175, 55, 0.1);
 }
 
 #share-athlete-name {
