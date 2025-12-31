@@ -620,43 +620,78 @@ function promptPdfUpload(gender, dist) {
 // =============================================================================
 // EVENT ENTRY
 // =============================================================================
+// =============================================================================
+// EVENT ENTRY
+// =============================================================================
+// =============================================================================
+// EVENT ENTRY
+// =============================================================================
 function renderEventEntry() {
     const gender = appState.viewGender;
     const dist = appState.viewDistance;
     const config = OLYMPIC_CONFIG[gender][dist];
 
     let content = `
-        <div class="section-header"><h2>Event Data Entry</h2></div>
+        <div class="section-header" style="border-bottom: 2px solid #D4AF37; margin-bottom: 30px; padding-bottom: 10px;">
+            <h2 style="color: #fff; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 800;">
+                <span style="color: #D4AF37;">${gender === 'women' ? "WOMEN'S" : "MEN'S"}</span> EVENT ENTRY
+            </h2>
+        </div>
         ${renderEventSelectors()}
-        <hr class="my-2">
+        <div style="height: 30px;"></div>
+    `;
+
+    // Premium Theme Styles
+    const cardStyle = `
+        background: rgba(13, 17, 23, 0.9); 
+        border: 1px solid rgba(212, 175, 55, 0.2); 
+        border-radius: 12px; 
+        padding: 30px; 
+        box-shadow: 0 0 20px rgba(0,0,0,0.5); 
+        backdrop-filter: blur(10px);
+        margin-bottom: 30px;
+    `;
+    const inputStyle = `
+        background: rgba(255, 255, 255, 0.05); 
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        color: #fff; 
+        padding: 12px 15px; 
+        border-radius: 6px; 
+        font-family: inherit;
+        transition: border-color 0.2s;
+    `;
+    const labelStyle = `
+        font-size: 0.85em; 
+        text-transform: uppercase; 
+        letter-spacing: 1.5px; 
+        color: #D4AF37; 
+        margin-bottom: 10px; 
+        font-weight: 700;
+        display: block;
     `;
 
     if (config && config.isMassStartPoints) {
         content += `
-            <div class="card alert-info mb-2">
-                <h4>Mass Start Manager</h4>
-                <p>Detailed Points System Active</p>
+            <div style="${cardStyle} border-left: 4px solid #D4AF37;">
+                <h3 style="margin:0 0 5px 0; color: #fff;">Mass Start Manager</h3>
+                <p style="margin:0; color: #888; font-style: italic;">Detailed Points System Active</p>
             </div>
-            <div class="race-tabs mb-1">
+            <div class="race-tabs mb-2 mt-2" style="justify-content: center;">
                 ${[1, 2, 3, 4].map(r => `
                     <button class="race-tab ${appState.selectedMsRace === r ? 'active' : ''}" 
-                    onclick="appState.selectedMsRace=${r}; renderCurrentTab()">Race ${r}</button>
+                    onclick="appState.selectedMsRace=${r}; renderCurrentTab()">RACE ${r}</button>
                 `).join('')}
             </div>
             <div id="ms-entry-container"></div>
         `;
     } else if (dist === '500m') {
         const race = appState.selected500mRace || 1;
-        // Ensure sub-races exist
         if (!appState.events[gender]['500m'].races) {
             appState.events[gender]['500m'].races = { 1: [], 2: [] };
         }
         const results = appState.events[gender]['500m'].races[race] || [];
-        // Sort by rank implicitly (order of entry?) or best not to sort here if raw
-        // Let's assume order of entry matches rank unless rearranged. But typically users enter 1, 2, 3...
-        // We will just render them. 
 
-        // Prepare datalist for autocomplete
+        // Prepare datalist
         const existingAthletes = appState.athletes.filter(a => a.gender === gender);
         const dataListHtml = `
             <datalist id="athlete-names">
@@ -665,50 +700,78 @@ function renderEventEntry() {
         `;
 
         content += `
-             <div class="card mt-2">
-                <h3>🏁 ${gender === 'women' ? "Women's" : "Men's"} 500m</h3>
-                <p class="text-muted">Best time of 2 races counts. Enter results for both races below.</p>
-
-                <div class="race-tabs mb-1">
-                    <button class="race-tab ${race === 1 ? 'active' : ''}" onclick="appState.selected500mRace=1; renderCurrentTab()">Race 1</button>
-                    <button class="race-tab ${race === 2 ? 'active' : ''}" onclick="appState.selected500mRace=2; renderCurrentTab()">Race 2</button>
-                </div>
-
-                <div style="background:#222; border:1px solid #444; border-radius:8px; padding:15px; margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <strong>📱 Smart Results Paste (Race ${race})</strong>
+             <div style="${cardStyle}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div>
+                        <div style="${labelStyle}">Active Event</div>
+                        <h2 style="margin: 0; color: #fff; font-size: 2em; font-weight: 800; text-transform: uppercase;">
+                            ${dist} <span style="color: #666; font-size: 0.6em; vertical-align: middle;">// RACE ${race}</span>
+                        </h2>
                     </div>
-                    <textarea id="smart-paste-area" class="form-control" rows="3" placeholder="Paste messed up text from your phone photo here..."></textarea>
-                    <button class="btn btn-primary mt-2 w-100" onclick="processSmartPaste()">✨ Process & Add to Race ${race}</button>
-                    <div id="smart-status" style="margin-top:5px; font-size:0.9em; color:#aaa;"></div>
+                    <div class="race-tabs" style="margin: 0;">
+                        <button class="race-tab ${race === 1 ? 'active' : ''}" onclick="appState.selected500mRace=1; renderCurrentTab()">RACE 1</button>
+                        <button class="race-tab ${race === 2 ? 'active' : ''}" onclick="appState.selected500mRace=2; renderCurrentTab()">RACE 2</button>
+                    </div>
                 </div>
 
-                <div class="form-group mb-1 p-2" style="background:#f9f9f9; border-radius:8px;">
-                     <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="font-weight:bold; font-size:1.2em; width:30px; text-align:center;">${results.length + 1}.</span>
-                        <div style="flex:2">
-                            <input type="text" id="athlete-input" list="athlete-names" class="form-control" placeholder="Type Athlete Name" autocomplete="off">
+                <!-- Smart Paste Section -->
+                <div style="background: rgba(46, 204, 113, 0.05); border: 1px dashed rgba(46, 204, 113, 0.3); border-radius: 8px; padding: 25px; margin-bottom: 40px;">
+                    <div style="display:flex; align-items: center; margin-bottom: 15px; color: #2ecc71;">
+                        <span style="font-size: 1.5em; margin-right: 15px;">📱</span>
+                        <div>
+                            <strong style="display: block; font-size: 1.1em;">Smart Results Paste</strong>
+                            <span style="font-size: 0.85em; opacity: 0.8;">Take photo of results -> "Copy Text" -> Paste below</span>
+                        </div>
+                    </div>
+                    <textarea id="smart-paste-area" class="form-control" rows="3" 
+                        placeholder="1. Erin Jackson 37.60&#10;2. Brittany Bowe 38.04..." 
+                        style="${inputStyle} width: 100%; font-family: monospace; font-size: 0.9em; resize: vertical; border-color: rgba(46, 204, 113, 0.2);"></textarea>
+                    
+                    <button class="btn" onclick="processSmartPaste()" style="margin-top: 15px; width: 100%; background: #2ecc71; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s;">
+                        ✨ Process & Add to Race ${race}
+                    </button>
+                    <div id="smart-status" style="margin-top:10px; font-size:0.9em; color:#aaa; text-align: right; min-height: 20px;"></div>
+                </div>
+
+                <!-- Manual Entry Row -->
+                 <div style="margin-bottom: 10px;">
+                     <div style="${labelStyle}">Manual Entry</div>
+                     <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 40px 2fr 1fr auto; gap: 15px; align-items: center; border: 1px solid rgba(255,255,255,0.05);">
+                        <span style="font-weight:900; color: #D4AF37; text-align: center; font-size: 1.2em;">${results.length + 1}.</span>
+                        
+                        <div style="position: relative;">
+                            <input type="text" id="athlete-input" list="athlete-names" placeholder="ATHLETE NAME" autocomplete="off" style="${inputStyle} width: 100%; text-transform: uppercase; font-weight: 600;">
                             ${dataListHtml}
                         </div>
-                        <div style="flex:1">
-                            <input type="text" id="manual-time" class="form-control" placeholder="Time (34.50)">
-                        </div>
-                        <button class="btn btn-primary" onclick="addEventResult()">Add</button>
+                        
+                        <input type="text" id="manual-time" placeholder="TIME (34.50)" style="${inputStyle} width: 100%; text-align: center; font-family: monospace;">
+                        
+                        <button onclick="addEventResult()" style="background: #D4AF37; color: #000; border: none; padding: 12px 30px; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; height: 100%;">ADD</button>
                     </div>
                 </div>
 
-                <table class="data-table mt-1">
-                    <thead><tr><th style="width:50px">Rank</th><th>Athlete</th><th>Time</th><th>Action</th></tr></thead>
+                <!-- Results Table -->
+                <table class="data-table mt-4" style="width: 100%; border-collapse: separate; border-spacing: 0 4px;">
+                    <thead>
+                        <tr style="color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px;">
+                            <th style="padding: 10px 20px;">Rank</th>
+                            <th style="padding: 10px;">Athlete</th>
+                            <th style="padding: 10px; text-align: center;">Time</th>
+                            <th style="padding: 10px; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         ${results.map((r, i) => `
-                            <tr>
-                                <td>${i + 1}</td>
-                                <td>${r.name}</td>
-                                <td>${r.time || '-'}</td>
-                                <td><button class="btn btn-sm btn-danger" onclick="removeEventResult(${i})"> Remove</button></td>
+                            <tr style="background: rgba(255,255,255,0.03); transition: background 0.2s;">
+                                <td style="padding: 15px 20px; border-radius: 6px 0 0 6px; font-weight: 900; color: #fff; font-size: 1.1em;">${i + 1}</td>
+                                <td style="padding: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${r.name}</td>
+                                <td style="padding: 15px; font-family: monospace; color: #D4AF37; font-size: 1.1em; text-align: center;">${r.time || '-'}</td>
+                                <td style="padding: 15px; text-align: right; border-radius: 0 6px 6px 0;">
+                                    <button onclick="removeEventResult(${i})" style="background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Remove</button>
+                                </td>
                             </tr>
                         `).join('')}
-                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center text-muted">No entries yet for Race ${race}.</td></tr>` : ''}
+                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center" style="padding: 40px; color: #666; font-style: italic;">No entries yet for Race ${race}.</td></tr>` : ''}
                     </tbody>
                 </table>
              </div>
@@ -718,7 +781,6 @@ function renderEventEntry() {
         const results = appState.events[gender][dist].results || [];
         results.sort((a, b) => a.rank - b.rank);
 
-        // Prepare datalist for autocomplete
         const existingAthletes = appState.athletes.filter(a => a.gender === gender);
         const dataListHtml = `
             <datalist id="athlete-names">
@@ -727,45 +789,74 @@ function renderEventEntry() {
         `;
 
         content += `
-            <div class="card mt-2">
-                <h3>🏁 ${gender === 'women' ? "Women's" : "Men's"} ${dist}</h3>
-                <p class="text-muted">${isTP ? "Type names of Team Pursuit Specialists." : "Type names in finishing order (1st, 2nd, etc)."}</p>
-                
-                <div style="background:#222; border:1px solid #444; border-radius:8px; padding:15px; margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <strong>📱 Smart Results Paste</strong>
+            <div style="${cardStyle}">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div>
+                        <div style="${labelStyle}">Active Event</div>
+                        <h2 style="margin: 0; color: #fff; font-size: 2em; font-weight: 800; text-transform: uppercase;">
+                            ${dist}
+                        </h2>
+                         <p style="margin: 5px 0 0 0; color: #888; font-size: 0.9em; font-style: italic;">${isTP ? "Enter Team Pursuit Specialists" : "Enter results in finishing order"}</p>
                     </div>
-                    <textarea id="smart-paste-area" class="form-control" rows="3" placeholder="Paste messed up text from your phone photo here..."></textarea>
-                    <button class="btn btn-primary mt-2 w-100" onclick="processSmartPaste()">✨ Process & Add</button>
-                    <div id="smart-status" style="margin-top:5px; font-size:0.9em; color:#aaa;"></div>
+                </div>
+                
+                <!-- Smart Paste Section -->
+                <div style="background: rgba(46, 204, 113, 0.05); border: 1px dashed rgba(46, 204, 113, 0.3); border-radius: 8px; padding: 25px; margin-bottom: 40px;">
+                     <div style="display:flex; align-items: center; margin-bottom: 15px; color: #2ecc71;">
+                        <span style="font-size: 1.5em; margin-right: 15px;">📱</span>
+                        <div>
+                             <strong style="display: block; font-size: 1.1em;">Smart Results Paste</strong>
+                             <span style="font-size: 0.85em; opacity: 0.8;">Take photo -> Copy Text -> Paste below</span>
+                        </div>
+                    </div>
+                    <textarea id="smart-paste-area" class="form-control" rows="3" 
+                        placeholder="1. Name Time&#10;2. Name Time..." 
+                         style="${inputStyle} width: 100%; font-family: monospace; font-size: 0.9em; resize: vertical; border-color: rgba(46, 204, 113, 0.2);"></textarea>
+                    <button class="btn" onclick="processSmartPaste()" style="margin-top: 15px; width: 100%; background: #2ecc71; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s;">
+                        ✨ Process & Add Results
+                    </button>
+                    <div id="smart-status" style="margin-top:10px; font-size:0.9em; color:#aaa; text-align: right; min-height: 20px;"></div>
                 </div>
 
-                <div class="form-group mb-1 p-2" style="background:#f9f9f9; border-radius:8px;">
-                     <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="font-weight:bold; font-size:1.2em; width:30px; text-align:center;">${results.length + 1}.</span>
-                        <div style="flex:2">
-                            <input type="text" id="athlete-input" list="athlete-names" class="form-control" placeholder="Type Athlete Name" autocomplete="off">
+                <!-- Manual Entry Row -->
+                 <div style="margin-bottom: 10px;">
+                    <div style="${labelStyle}">Manual Entry</div>
+                     <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 40px 2fr ${!isTP ? '1fr' : ''} auto; gap: 15px; align-items: center; border: 1px solid rgba(255,255,255,0.05);">
+                        <span style="font-weight:900; color: #D4AF37; text-align: center; font-size: 1.2em;">${results.length + 1}.</span>
+                        
+                        <div style="position: relative;">
+                            <input type="text" id="athlete-input" list="athlete-names" placeholder="ATHLETE NAME" autocomplete="off" style="${inputStyle} width: 100%; text-transform: uppercase; font-weight: 600;">
                             ${dataListHtml}
                         </div>
-                        ${!isTP ? `<div style="flex:1">
-                            <input type="text" id="manual-time" class="form-control" placeholder="Time (Optional)">
-                        </div>` : ''}
-                        <button class="btn btn-primary" onclick="addEventResult()">Add</button>
+                        
+                        ${!isTP ? `<input type="text" id="manual-time" placeholder="TIME" style="${inputStyle} width: 100%; text-align: center; font-family: monospace;">` : ''}
+                        
+                        <button onclick="addEventResult()" style="background: #D4AF37; color: #000; border: none; padding: 12px 30px; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; height: 100%;">ADD</button>
                     </div>
                 </div>
 
-                <table class="data-table mt-1">
-                    <thead><tr><th style="width:50px">Rank</th><th>Athlete</th>${!isTP ? '<th>Time</th>' : ''}<th>Action</th></tr></thead>
+                <!-- Results Table -->
+                <table class="data-table mt-4" style="width: 100%; border-collapse: separate; border-spacing: 0 4px;">
+                    <thead>
+                         <tr style="color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px;">
+                            <th style="padding: 10px 20px;">Rank</th>
+                            <th style="padding: 10px;">Athlete</th>
+                            ${!isTP ? '<th style="padding: 10px; text-align: center;">Time</th>' : ''}
+                            <th style="padding: 10px; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         ${results.map((r, i) => `
-                            <tr>
-                                <td>${r.rank}</td>
-                                <td>${r.name}</td>
-                                ${!isTP ? `<td>${r.time || '-'}</td>` : ''}
-                                <td><button class="btn btn-sm btn-danger" onclick="removeEventResult(${i})"> Remove</button></td>
+                             <tr style="background: rgba(255,255,255,0.03); transition: background 0.2s;">
+                                <td style="padding: 15px 20px; border-radius: 6px 0 0 6px; font-weight: 900; color: #fff; font-size: 1.1em;">${r.rank}</td>
+                                <td style="padding: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${r.name}</td>
+                                ${!isTP ? `<td style="padding: 15px; font-family: monospace; color: #D4AF37; font-size: 1.1em; text-align: center;">${r.time || '-'}</td>` : ''}
+                                <td style="padding: 15px; text-align: right; border-radius: 0 6px 6px 0;">
+                                    <button onclick="removeEventResult(${i})" style="background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Remove</button>
+                                </td>
                             </tr>
                         `).join('')}
-                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center text-muted">No entries yet.</td></tr>` : ''}
+                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center" style="padding: 40px; color: #666; font-style: italic;">No entries yet.</td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
@@ -2916,27 +3007,71 @@ function exportData() {
 
 function toggleAdminMode() {
     if (!appState.isAdmin) {
-        const password = prompt("Enter Admin Password:");
-        if (password === "admin123") { // Simple protection
-            appState.isAdmin = true;
-            document.body.classList.add('admin-mode');
-            document.getElementById('admin-login-btn').innerText = "🔓 Admin Active";
-            alert("Admin Mode Unlocked");
-        } else {
-            alert("Incorrect Password");
+        // Create modal dynamically if it doesn't exist
+        if (!document.getElementById('admin-modal')) {
+            const modal = document.createElement('div');
+            modal.id = 'admin-modal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+            `;
+            modal.innerHTML = `
+                <div style="background: #222; padding: 30px; border-radius: 12px; border: 1px solid #444; text-align: center; width: 300px;">
+                    <h3 style="margin-top: 0; color: #D4AF37;">Admin Access</h3>
+                    <input type="password" id="admin-pw-input" class="form-control" placeholder="Password" style="margin: 20px 0; text-align: center;">
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-primary" onclick="checkAdminPassword()">Unlock</button>
+                        <button class="btn btn-danger" onclick="closeAdminModal()">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
         }
+
+        document.getElementById('admin-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('admin-pw-input').focus(), 100);
+
+        // Handle Enter key
+        document.getElementById('admin-pw-input').onkeydown = (e) => {
+            if (e.key === 'Enter') checkAdminPassword();
+            if (e.key === 'Escape') closeAdminModal();
+        };
+
     } else {
         appState.isAdmin = false;
         document.body.classList.remove('admin-mode');
         document.getElementById('admin-login-btn').innerText = "🔒 Admin";
-        // If on a hidden tab, switch to dashboard
         if (['events', 'athletes'].includes(appState.currentTab)) {
             appState.currentTab = 'dashboard';
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.querySelector('[data-tab="dashboard"]').classList.add('active');
         }
+        renderCurrentTab();
     }
-    renderCurrentTab();
+}
+
+function closeAdminModal() {
+    const modal = document.getElementById('admin-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function checkAdminPassword() {
+    const input = document.getElementById('admin-pw-input');
+    const password = input.value;
+
+    if (password === "admin123") {
+        appState.isAdmin = true;
+        document.body.classList.add('admin-mode');
+        document.getElementById('admin-login-btn').innerText = "🔓 Admin Active";
+        closeAdminModal();
+        renderCurrentTab();
+        input.value = ''; // clear for next time
+    } else {
+        alert("Incorrect Password");
+        input.value = '';
+        input.focus();
+    }
 }
 
 function openShareModal(athleteName) {
