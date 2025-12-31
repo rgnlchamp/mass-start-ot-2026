@@ -1084,19 +1084,22 @@ body.admin-mode .admin-only {
 }
 
 .ig-card {
-    width: 320px;
-    height: 500px;
-    background: linear-gradient(145deg, #000000, #1a1a1a);
-    border: 2px solid #D4AF37;
+    width: 340px;
+    height: 520px;
+    background: #000;
+    background-image:
+        radial-gradient(circle at top right, rgba(212, 175, 55, 0.15), transparent),
+        radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.05), transparent);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0;
-    padding: 30px;
+    padding: 40px 30px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
     text-align: center;
     font-family: 'Outfit', sans-serif;
-    box-shadow: 0 0 40px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
     margin: 0 auto 20px auto;
     position: relative;
     overflow: hidden;
@@ -1108,8 +1111,8 @@ body.admin-mode .admin-only {
     top: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, #D4AF37, #FDF5E6, #D4AF37);
+    height: 8px;
+    background: linear-gradient(90deg, #B47B2B, #E8BD56, #B47B2B);
 }
 
 .ig-card::after {
@@ -1118,29 +1121,8 @@ body.admin-mode .admin-only {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, #D4AF37, #FDF5E6, #D4AF37);
-}
-
-.ig-header {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.ig-year {
-    color: #666;
-    font-weight: 800;
-    letter-spacing: 4px;
-    font-size: 14px;
-}
-
-.ig-title {
-    color: white;
-    font-weight: 800;
-    font-size: 28px;
-    letter-spacing: 2px;
-    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
+    height: 8px;
+    background: linear-gradient(90deg, #B47B2B, #E8BD56, #B47B2B);
 }
 
 .ig-content {
@@ -1152,71 +1134,314 @@ body.admin-mode .admin-only {
 }
 
 .ig-qualified-label {
-    color: #D4AF37;
-    font-size: 16px;
-    letter-spacing: 4px;
-    font-weight: 700;
-    margin-bottom: 20px;
-    border: 2px solid #D4AF37;
-    padding: 8px 24px;
-    display: inline-block;
-    align-self: center;
+    color: #fff;
+    font-size: 14px;
+    letter-spacing: 5px;
+    font-weight: 800;
+    margin-bottom: 30px;
+    padding: 10px 0;
+    display: block;
     text-transform: uppercase;
-    background: rgba(212, 175, 55, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #share-athlete-name {
-    font-size: 32px;
-    font-weight: 800;
-    color: white;
-    margin: 10px 0 20px 0;
-    line-height: 1.1;
+    font-size: 42px;
+    font-weight: 900;
+    color: #fff;
+    margin: 10px 0 25px 0;
+    line-height: 0.95;
     text-transform: uppercase;
-    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    letter-spacing: -1px;
 }
 
 .ig-events-label {
-    color: #888;
-    font-size: 10px;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
+    color: #D4AF37;
+    font-size: 11px;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .ig-events-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     justify-content: center;
 }
 
 .ig-events-list span {
-    background: #333;
+    background: rgba(255, 255, 255, 0.1);
     color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid #444;
+    padding: 8px 16px;
+    border-radius: 0;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    text-transform: uppercase;
 }
 
 .ig-footer {
-    border-top: 1px solid #333;
     width: 100%;
-    padding-top: 15px;
+    padding-top: 20px;
 }
 
 .ig-footer p {
     margin: 0;
-    color: #666;
-    font-size: 10px;
-    letter-spacing: 1px;
+    color: #888;
+    font-size: 11px;
+    letter-spacing: 2px;
     text-transform: uppercase;
+    font-weight: 500;
 }
 
 .ig-brand {
     color: #D4AF37 !important;
+    font-weight: 800;
+    margin-top: 8px !important;
+    font-size: 13px !important;
+    letter-spacing: 1px !important;
+}
+
+/* Member Status & Alerts */
+.status-qualified {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-top: 5px !important;
-    font-size: 11px !important;
-    letter-spacing: 0.5px !important;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: #ef4444 !important;
+    color: #fca5a5;
+}
+
+.alert-success {
+    background: rgba(34, 197, 94, 0.1) !important;
+    border-color: #22c55e !important;
+    color: #86efac;
+}
+
+.alert-info {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: #3b82f6 !important;
+    color: #93c5fd;
+}
+
+.badge-warn {
+    background: #D4AF37 !important;
+    color: #000 !important;
+}
+
+.border-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* --- NEW DASHBOARD ELEMENTS --- */
+
+/* Selection 101 Explainer */
+.explainer-card {
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px dashed var(--accent-gold);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    position: relative;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.explainer-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+.explainer-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.step-item {
+    display: flex;
+    gap: 12px;
+}
+
+.step-num {
+    background: var(--accent-gold);
+    color: #000;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.step-text b {
+    display: block;
+    color: #fff;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.step-text p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Roster Progress Bar */
+.progress-section {
+    margin-bottom: 2rem;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 8px;
+}
+
+.progress-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.progress-count {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent-gold);
+}
+
+.progress-bar-container {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100px;
+    display: flex;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-segment {
+    height: 100%;
+    transition: width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.seg-protected {
+    background: var(--success);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+
+.seg-vulnerable {
+    background: var(--accent-gold);
+}
+
+.seg-out {
+    background: #444;
+}
+
+/* Roster Table Specifics */
+.row-protected {
+    border-left: 4px solid var(--success) !important;
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.row-vulnerable {
+    border-left: 4px solid var(--accent-gold) !important;
+    background: rgba(212, 175, 55, 0.03);
+}
+
+.row-out {
+    opacity: 0.6;
+    filter: grayscale(0.5);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.status-note {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: block;
+    margin-top: 2px;
+}
+
+.note-protected {
+    color: var(--success);
+}
+
+.note-vulnerable {
+    color: var(--accent-gold);
+}
+
+.note-out {
+    color: var(--text-muted);
+}
+
+/* Mass Start Dropped Logic */
+.ms-score-dropped {
+    text-decoration: line-through;
+    opacity: 0.4;
+    position: relative;
+    color: var(--text-muted);
+}
+
+.ms-score-dropped::after {
+    content: 'dropped';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    text-transform: uppercase;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: var(--error);
+}
+
+@keyframes pulse-red {
+    0% {
+        background: #ff4444;
+        box-shadow: 0 0 5px #ff4444;
+    }
+
+    50% {
+        background: #b30000;
+        box-shadow: 0 0 20px #ff4444;
+    }
+
+    100% {
+        background: #ff4444;
+        box-shadow: 0 0 5px #ff4444;
+    }
 }

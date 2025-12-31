@@ -157,123 +157,51 @@ function renderDashboard() {
     const womenStats = calculateReduction('women');
 
     // Calculate filled spots - ONLY count actual athletes, not placeholders like "Team Pursuit Slot X"
-    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot') && name !== 'Available';
+    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot');
     const menRealAthletes = menStats.roster.filter(a => isRealAthlete(a.name));
     const womenRealAthletes = womenStats.roster.filter(a => isRealAthlete(a.name));
 
     const menCount = Math.min(menRealAthletes.length, menStats.teamCap);
     const womenCount = Math.min(womenRealAthletes.length, womenStats.teamCap);
 
-    const totalCount = menCount + womenCount;
-    const maxViz = 18; // We show up to 18 to visualize overflow past the 14-spot cap
-    const cutPercentage = (14 / maxViz) * 100;
-
     return `
         <div class="section-header">
-            <h2>Qualification Guide 2026</h2>
+            <h2>???? Dashboard</h2>
         </div>
 
-        <!-- QUALIFICATION GUIDE -->
-        <div class="explainer-card" style="border: 2px solid var(--accent-gold); background: rgba(0,0,0,0.4); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                <span class="usa-badge" style="font-size: 0.65rem; padding: 2px 8px; letter-spacing: 1px; height: auto;">USA</span>
-                <span style="color: var(--accent-gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem;">How to Make The Team</span>
-            </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">The process is nuanced, but the goal is simple: Be fast.</p>
-
-            <div class="explainer-steps" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 20px;">
-                <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">1. Win</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Finish Top 2 or 3 at Selection</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">Most spots are earned directly by finishing on the podium at the <b>2026 Trials in Milwaukee</b>.</p>
-                </div>
-                <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">2. Rank</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Earn a Quota Spot</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">The Team has a limited number of "tickets" (quotas) for each distance. Often, only the top 2 or 3 finishers get to go.</p>
-                </div>
-                <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">3. Survive</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Avoid the "Cut"</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">The Team is capped at <b>8 Men and 6 Women</b>. If more people qualify, the skaters with the lowest "SOQC Rankings" get cut.</p>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">????</div>
+                <div class="stat-info">
+                    <span class="stat-value">${getBranding('TEAM_NAME')}</span>
+                    <span class="stat-label">${getBranding('SHORT_EVENT_NAME')}</span>
                 </div>
             </div>
-
-            <div style="background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.2); padding: 12px 18px; border-radius: 6px; display: flex; align-items: center; gap: 15px;">
-                <span style="font-size: 1.4rem;">USA</span>
-                <div>
-                    <b style="color: var(--accent-gold); font-size: 0.85rem; display: block; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Team Size Limit</b>
-                    <p style="font-size: 0.8rem; color: #fff; margin: 0; opacity: 0.9;">Based on Fall World Cup results, The Team is restricted to <b>8 Men and 6 Women</b> for the 2026 Games.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="stats-grid" style="margin-bottom: 1.5rem;">
              <div class="stat-card">
-                <div class="stat-icon" style="color: #3b82f6;">M</div>
+                <div class="stat-icon">??????</div>
                 <div class="stat-info">
                     <span class="stat-value">${menCount} / ${menStats.teamCap}</span>
-                    <span class="stat-label">Men's Spots</span>
+                    <span class="stat-label">Men's Team</span>
                 </div>
             </div>
              <div class="stat-card">
-                <div class="stat-icon" style="color: #ec4899;">W</div>
+                <div class="stat-icon">??????</div>
                 <div class="stat-info">
                     <span class="stat-value">${womenCount} / ${womenStats.teamCap}</span>
-                    <span class="stat-label">Women's Spots</span>
+                    <span class="stat-label">Women's Team</span>
                 </div>
             </div>
              <div class="stat-card">
-                <div class="stat-icon">T</div>
+                <div class="stat-icon">????</div>
                 <div class="stat-info">
-                    <span class="stat-value">${totalCount} / 14</span>
-                    <span class="stat-label">Total Roster</span>
+                    <span class="stat-value">${menCount + womenCount}</span>
+                    <span class="stat-label">Total Team Size (Women/Men)</span>
                 </div>
             </div>
         </div>
-
-        <!-- PROGRESS TRACKER WITH CUT LINE -->
-        <div class="card" style="margin-bottom: 2rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
-            <div class="progress-section" style="margin-bottom: 0;">
-                <div class="progress-header" style="margin-bottom: 12px;">
-                    <div class="progress-title" style="letter-spacing: 1.5px; font-weight: 900; opacity: 1;">COMBINED TEAM PROGRESSION</div>
-                    <div class="progress-count" style="font-size: 1.2rem; font-weight: 900; color: var(--accent-gold);">${totalCount} / 14</div>
-                </div>
-                
-                <div class="progress-bar-wrapper" style="position: relative; padding: 15px 0;">
-                    <div class="progress-bar-container" style="background: rgba(255,255,255,0.03); height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); position: relative; display: flex; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
-                        <!-- Main Roster (Gold) up to 14 -->
-                        <div class="progress-segment" 
-                             style="width: ${Math.min(cutPercentage, (totalCount / maxViz) * 100)}%; 
-                                    background: var(--accent-gold); 
-                                    height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-                                    box-shadow: inset 0 0 10px rgba(255,255,255,0.2);"></div>
-                        
-                        <!-- Overflow (Red) beyond 14 -->
-                        ${totalCount > 14 ? `
-                            <div class="progress-segment pulse-red" 
-                                 style="width: ${Math.min(100 - cutPercentage, ((totalCount - 14) / maxViz) * 100)}%; 
-                                        background: var(--error); 
-                                        height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-                        ` : ''}
-                    </div>
-
-                    <!-- STATIC CUT LINE MARKER (OUTSIDE OVERFLOW) -->
-                    <div style="position: absolute; left: ${cutPercentage}%; top: 5px; bottom: 5px; width: 3px; background: #fff; z-index: 20; box-shadow: 0 0 15px #fff, 0 0 5px #000; border-radius: 2px; pointer-events: none;">
-                        <div style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #fff; font-weight: 900; white-space: nowrap; letter-spacing: 1px; text-shadow: 0 0 5px #000;">14 PERSON CUT LINE</div>
-                        ${totalCount > 14 ? `<div style="position: absolute; bottom: -16px; left: 0; font-size: 8px; color: var(--error); font-weight: 900; white-space: nowrap; letter-spacing: 1px;">REDUCTION AREA</div>` : ''}
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">
-                    <span style="color: ${totalCount > 14 ? 'var(--error)' : 'var(--accent-gold)'}">
-                        ${totalCount > 14 ? 'REDUCTION ACTIVE' : totalCount === 14 ? 'ROSTER FULL' : 'OPEN SPOTS REMAINING'}
-                    </span>
-                    <span style="color: var(--text-muted); opacity: 0.7;">MAX 14 SPOTS CAP</span>
-                </div>
-            </div>
+        
         </div>
-
+        
         <div class="mt-2">
             ${renderOlympicTeamTracker()}
         </div>
@@ -295,25 +223,28 @@ function switchToTab(tab) {
 function renderOlympicTeamTracker() {
     try {
         const gender = appState.viewGender;
+        // Calculate the full team with reduction
         const { roster: fullRoster, teamCap } = calculateReduction(gender);
 
-        const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot') && name !== 'Available';
+        // Filter out placeholder entries - only count real athletes
+        const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot');
         const roster = fullRoster.filter(a => isRealAthlete(a.name));
 
         const qualifiedCount = roster.length;
         const cutCount = Math.max(0, qualifiedCount - teamCap);
         const onTeamCount = Math.min(qualifiedCount, teamCap);
 
+        // Determine Bubble Context
         let statusMessage = "";
         let statusClass = "";
         if (cutCount > 0) {
-            statusMessage = `<strong>Reduction Active:</strong> ${cutCount} ${gender === 'women' ? 'Women' : 'Men'} must be cut to meet the ${teamCap}-person cap.`;
+            statusMessage = `?????? <strong>Reduction Active:</strong> ${cutCount} athlete(s) must be cut to meet the ${teamCap}-person cap.`;
             statusClass = "alert-error";
         } else if (qualifiedCount === teamCap) {
-            statusMessage = `<strong>Team Full:</strong> ${gender === 'women' ? "Women's" : "Men's"} Roster is at exactly ${teamCap} athletes.`;
+            statusMessage = `??? <strong>Team Full:</strong> Roster is at exactly ${teamCap} athletes.`;
             statusClass = "alert-success";
         } else {
-            statusMessage = `<strong>Open Spots:</strong> ${teamCap - qualifiedCount} ${gender === 'women' ? "Women's" : "Men's"} roster spots remaining before reduction is needed.`;
+            statusMessage = `?????? <strong>Open Spots:</strong> ${teamCap - qualifiedCount} roster spots remaining before reduction is needed.`;
             statusClass = "alert-info";
         }
 
@@ -328,13 +259,32 @@ function renderOlympicTeamTracker() {
                 <h2>${getBranding('TRACKER_TITLE')}</h2>
             </div>
             
+            <!-- DASHBOARD SUMMARY -->
+            <div class="stats-grid mb-2">
+                <div class="stat-card ${cutCount > 0 ? 'border-error' : ''}">
+                    <div class="stat-icon">${cutCount > 0 ? '??????' : '????'}</div>
+                    <div class="stat-info">
+                        <span class="stat-value">${onTeamCount} / ${teamCap}</span>
+                        <span class="stat-label">Roster Size</span>
+                    </div>
+                </div>
+                 <div class="stat-card">
+                    <div class="stat-icon">???????</div>
+                    <div class="stat-info">
+                        <span class="stat-value">${fullRoster.filter(r => r.reductionRank === 0).length}</span>
+                        <span class="stat-label">Protected</span>
+                    </div>
+                </div>
+            </div>
+            
             <div class="card ${statusClass} mb-2" style="border-left: 5px solid; padding:15px;">
                 ${statusMessage}
             </div>
 
             <div class="card mb-2">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>Predicted ${gender === 'women' ? "Women's" : "Men's"} Roster</h3>
+                    <h3>Predicted Team Roster</h3>
+                    <span class="text-muted text-sm">Sorted by Reduction Priority (1 = Protected/Highest)</span>
                 </div>
                 
                 <div class="table-container">
@@ -346,51 +296,37 @@ function renderOlympicTeamTracker() {
                             <th>Qualifying Basis</th>
                             <th>Priority Rank</th>
                             <th>Status</th>
+                            <th style="width:60px">Share</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${roster.map((t, idx) => {
-            const isOverCap = idx >= teamCap;
-            const isHighPriority = t.reductionRank > 0 && t.reductionRank <= 10;
-            const isProtected = t.reductionRank === 0 || t.events.includes('TpSpec') || isHighPriority;
-            const isActuallyAtRisk = roster.length > 14 && idx >= 11 && !isProtected;
+                        ${fullRoster.slice(0, teamCap).map((t, idx) => {
+            let displayRank = t.reductionRank === 0 ? '1 (Protected)' : t.reductionRank;
 
-            let displayRank = t.reductionRank === 0 ? 'Protected' : `Priority ${t.reductionRank}`;
+            // Custom Display for Team Pursuit (User Request)
             if (t.events.includes('TpSpec')) {
                 const tpRank = (gender === 'women') ? 3 : 1;
-                displayRank = `Priority ${tpRank} (Protected)`;
-            }
-
-            let rowClass = "";
-            let statusBadge = "";
-
-            if (isOverCap) {
-                rowClass = "row-out";
-                statusBadge = '<span class="status-note note-out">Outside Cap</span>';
-            } else if (isActuallyAtRisk) {
-                rowClass = "row-vulnerable";
-                statusBadge = '<span class="status-note note-vulnerable">On the Bubble</span>';
-            } else {
-                rowClass = "row-protected";
-                statusBadge = isProtected ? '<span class="status-note note-protected">Qualified</span>' : '<span class="status-note note-protected">In (Provisional)</span>';
+                displayRank = `${tpRank} (Protected)`;
             }
 
             return `
-                            <tr class="${rowClass}">
+                            <tr>
                                 <td>${idx + 1}</td>
-                                <td>
-                                    <strong>${t.name}</strong>
-                                    ${statusBadge}
-                                </td>
+                                <td><strong>${t.name}</strong></td>
                                 <td>${t.events.map(e => `<span class="badge ${e === 'TpSpec' ? 'badge-warn' : ''}">${e === 'TpSpec' ? 'Team Pursuit' : e}</span>`).join(' ')}</td>
                                 <td><strong>${displayRank}</strong></td>
                                 <td>
-                                    ${isOverCap ? '<span style="color:var(--error)">X Cut</span>' : '<span style="color:var(--success)">On Team</span>'}
+                                    ${t.reductionRank === 0 ? '<span class="status-qualified">???? Protected</span>' : '<span class="status-qualified">??? On Team</span>'}
+                                </td>
+                                <td>
+                                    ${!t.name.includes("Slot") && !t.name.includes("Available") ?
+                    `<button class="btn btn-sm" onclick="openShareModal('${t.name}')" style="background:#D4AF37; padding:2px 8px; font-size:12px;">????</button>`
+                    : ''}
                                 </td>
                             </tr>
                         `;
         }).join('')}
-                        ${roster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
+                        ${fullRoster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
                     </tbody>
                 </table>
                 </div>
@@ -403,7 +339,7 @@ function renderOlympicTeamTracker() {
         `;
     } catch (e) {
         console.error("Render Error:", e);
-        return `<div class="card alert-error"><h3>Error Loading Tracker</h3><p>${e.message}</p></div>`;
+        return `<div class="card alert-error"><h3>Error Loading Tracker</h3><p>${e.message}</p><pre>${e.stack}</pre></div>`;
     }
 }
 
@@ -596,7 +532,7 @@ function renderDistanceBreakdown(gender) {
                      <h4 style="margin:0 0 5px 0; border-bottom:2px solid #eee; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                         <span>${dist}</span>
                         <span style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn btn-sm" onclick="showSkatersToWatch('${gender}', '${dist}')" style="background:#337ab7; padding:2px 6px; font-size:11px;" title="Skaters to Watch">👀</button>
+                            <button class="btn btn-sm" onclick="showSkatersToWatch('${gender}', '${dist}')" style="background:#337ab7; padding:2px 6px; font-size:11px;" title="Skaters to Watch">????</button>
                             <span>Quota: ${config.quota}</span>
                         </span>
                     </h4>
@@ -670,7 +606,7 @@ function renderEventEntry() {
 
         content += `
             <div class="card mt-2">
-                <h3>🏁 ${gender === 'women' ? "Women's" : "Men's"} ${dist}</h3>
+                <h3>???? ${gender === 'women' ? "Women's" : "Men's"} ${dist}</h3>
                 <p class="text-muted">${isTP ? "Type names of Team Pursuit Specialists." : "Type names in finishing order (1st, 2nd, etc). New names will be auto-added."}</p>
                 
                 <div class="form-group mb-1 p-2" style="background:#f9f9f9; border-radius:8px;">
@@ -817,7 +753,7 @@ function renderMsEntryForm(raceNum) {
         <div class="card p-2">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3>Entry Form: Race ${raceNum}</h3>
-                <button class="btn btn-success" onclick="submitMsRace(${raceNum}, '${gender}', 16)">💾 Save Results</button>
+                <button class="btn btn-success" onclick="submitMsRace(${raceNum}, '${gender}', 16)">???? Save Results</button>
             </div>
             
             <h4 class="mt-1">Intermediate Sprints</h4>
@@ -1025,7 +961,7 @@ function renderAthletes() {
     return `
         <div class="section-header">
             <h2>Athlete Management</h2>
-            <button class="btn btn-primary" onclick="openAthleteModal()">➕ Add Athlete</button>
+            <button class="btn btn-primary" onclick="openAthleteModal()">??? Add Athlete</button>
         </div>
         <div class="table-container">
             <table class="data-table">
@@ -1148,7 +1084,7 @@ function renderRules() {
         return `
             <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
                 <h5 style="color: #ef4444; margin-bottom: 15px; display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:1.5em">✂️</span> 
+                    <span style="font-size:1.5em">??????</span> 
                     <div>
                         Reduction Order / The "Chopping Block"
                         <div style="font-size:0.7em; color:#aaa; font-weight:normal;">If Team Size > Cap, spots are cut in this order until we reach <strong>${g === 'women' ? '6' : '8'} athletes</strong>.</div>
@@ -1208,7 +1144,7 @@ function renderRules() {
                 ? '<span class="badge" style="background:#22c55e; color:black;">Discretionary</span>'
                 : (q.preNominated.length ? q.preNominated.map(name => {
                     const color = '#22c55e'; // All Green
-                    const text = `${name} ✓`;
+                    const text = `${name} ???`;
                     return `<span class="badge" style="background:${color}; color:black; margin-right:5px;">${text}</span>`;
                 }).join(' ') : '<span style="color:#666;">-</span>')
             }</td>
@@ -1228,7 +1164,7 @@ function renderRules() {
 
     return `
         <div class="section-header">
-            <h2>📖 Qualification Guide 2026</h2>
+            <h2>???? Qualification Guide 2026</h2>
         </div>
 
         <div class="card" style="border-top: 4px solid #D4AF37;">
@@ -1254,7 +1190,7 @@ function renderRules() {
             </div>
 
             <div style="background: rgba(212, 175, 55, 0.1); border: 1px solid #D4AF37; border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 15px;">
-                <div style="font-size: 2em;">🦅</div>
+                <div style="font-size: 2em;">????</div>
                 <div>
                     <strong style="color: #D4AF37;">Team Size Limit</strong>
                     <p style="margin: 0; font-size: 0.9em;">Based on Fall World Cup results, ${getBranding('TEAM_NAME')} is restricted to <strong style="color:white;">8 Men</strong> and <strong style="color:white;">6 Women</strong> for the 2026 Games.</p>
@@ -1263,18 +1199,18 @@ function renderRules() {
         </div>
 
         <div class="card mt-2">
-            <h3>📊 Detailed Quota Breakdown</h3>
+            <h3>???? Detailed Quota Breakdown</h3>
             <p class="text-muted">Below shows exactly how many spots exist for each distance and who is pre-nominated.</p>
             ${renderTable('women', config.women)}
             ${renderTable('men', config.men)}
         </div>
 
         <div class="card mt-2">
-            <h3>📜 Official Rules & Documentation</h3>
+            <h3>???? Official Rules & Documentation</h3>
             <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                  <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/bltcd66ae352ae96e83/694b3ece1e351c40b71969db/LT_Regs_25-26_Final_v2.2.pdf" target="_blank" style="text-decoration:none;">
                     <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
-                        <span style="font-size: 1.5em;">📄</span>
+                        <span style="font-size: 1.5em;">????</span>
                         <div>
                             <strong style="display:block; color:#fff;">USS Rules 2025-26</strong>
                             <span style="font-size: 0.8em; color: #888;">Complete Regulations PDF</span>
@@ -1283,7 +1219,7 @@ function renderRules() {
                 </a>
                 <a href="https://assets.contentstack.io/v3/assets/blteb7d012fc7ebef7f/blt328a2be74a7640b7/69248cbe33936a0790e5d9ce/Athlete_Selection_Procedures_-_USS_Long_Track_-_Amendment_2_SIGNED.pdf" target="_blank" style="text-decoration:none;">
                     <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; transition: background 0.2s;">
-                        <span style="font-size: 1.5em;">⚖️</span>
+                        <span style="font-size: 1.5em;">??????</span>
                         <div>
                             <strong style="display:block; color:#fff;">Selection Procedures</strong>
                             <span style="font-size: 0.8em; color: #888;">Official Olympic Criteria</span>
@@ -1303,7 +1239,7 @@ function renderRules() {
         </div>
 
         <div class="card mt-2">
-            <h3>🌍 IOC & ISU Qualification Rules</h3>
+            <h3>???? IOC & ISU Qualification Rules</h3>
             <div style="text-align: left; padding: 0 10px; color: #ccc; line-height: 1.6;">
                 <p><strong>Total Olympic Quota:</strong> 164 Skaters (82 Men / 82 Women) worldwide.</p>
                 
@@ -1317,8 +1253,8 @@ function renderRules() {
                 <h4 style="color: #D4AF37; margin-top: 15px;">How Spots are Earned (SOQC)</h4>
                 <p>Quotas are earned for the <strong>Country</strong>, not the specific athlete, based on the 2025 Fall World Cups.</p>
                 <ul style="list-style-type: none; padding-left: 10px;">
-                    <li style="margin-bottom: 8px;">📊 <strong>SOQC Points:</strong> Ranking based on World Cup points scored.</li>
-                    <li style="margin-bottom: 8px;">⏱️ <strong>SOQC Times:</strong> Ranking based on fastest times skate at World Cups.</li>
+                    <li style="margin-bottom: 8px;">???? <strong>SOQC Points:</strong> Ranking based on World Cup points scored.</li>
+                    <li style="margin-bottom: 8px;">?????? <strong>SOQC Times:</strong> Ranking based on fastest times skate at World Cups.</li>
                 </ul>
 
                 <h4 style="color: #D4AF37; margin-top: 15px;">Athlete Eligibility</h4>
@@ -1352,10 +1288,10 @@ function renderMassStartStandings() {
                     onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
             </div>
             <div class="btn-group" style="margin-right: 20px;">
-                <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">📸 Insta Post</button>
-                <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">📄 PDF</button>
+                <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">???? Insta Post</button>
+                <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">???? PDF</button>
             </div>
-            <h2>🏆 Mass Start Series Standings</h2>
+            <h2>???? Mass Start Series Standings</h2>
         </div>
 
         <div class="card" id="ms-standings-card">
@@ -1390,7 +1326,7 @@ function renderMassStartStandings() {
                                 <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${rank}</td>
                                 <td>
                                     <strong>${s.name}</strong>
-                                    ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">✅ Pre-Qualified</span>' : ''}
+                                    ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">??? Pre-Qualified</span>' : ''}
                                 </td>
                                 <td class="text-center">${s.races[1] || '<span class="text-muted">-</span>'}</td>
                                 <td class="text-center">${s.races[2] || '<span class="text-muted">-</span>'}</td>
@@ -1480,7 +1416,7 @@ function shareMsStandingsImage() {
     `;
 
     document.body.appendChild(exportContainer);
-    showToast('Generating high-res graphic... 🎨');
+    showToast('Generating high-res graphic... ????');
 
     html2canvas(exportContainer, {
         scale: 1,
@@ -1496,10 +1432,10 @@ function shareMsStandingsImage() {
             if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
                     files: [file],
-                    title: 'Mass Start Standings 🏆',
+                    title: 'Mass Start Standings ????',
                     text: `Latest ${genderLabel} Mass Start standings! #OlympicTrials2026`
                 })
-                    .then(() => showToast('Shared successfully! 🚀'))
+                    .then(() => showToast('Shared successfully! ????'))
                     .catch((error) => {
                         console.log('Error sharing:', error);
                         saveAsFile(blob, fileName);
@@ -1515,204 +1451,7 @@ function shareMsStandingsImage() {
     });
 }
 
-// =============================================================================
-// SKATERS TO WATCH MODAL (with Instagram-style export)
-// =============================================================================
-let currentWatchListBlob = null;
-let currentWatchListFileName = "";
-
-function getSkatersToWatchData(gender, dist) {
-    if (dist === 'mass_start') {
-        const standings = calculateMassStartStandings(gender);
-        const top10 = standings.filter(s => s.total > 0).slice(0, 10);
-        return {
-            note: top10.length === 0 ? "No mass start points recorded yet." : null,
-            skaters: top10.map((s, i) => ({
-                rank: i + 1,
-                name: s.name,
-                time: `${s.total} pts`,
-                notes: ''
-            }))
-        };
-    }
-    return null;
-}
-
-function showSkatersToWatch(gender, dist) {
-    const data = getSkatersToWatchData(gender, dist);
-
-    const genderLabel = gender === 'women' ? "Women's" : "Men's";
-    const distLabel = dist === 'mass_start' ? 'Mass Start' : dist === 'team_pursuit' ? 'Team Pursuit' : dist;
-    const listSubHeader = dist === 'mass_start' ? 'Current Standings' : '2026 Season Bests';
-    const valueHeader = dist === 'mass_start' ? 'Points' : 'Time';
-
-    currentWatchListBlob = null;
-
-    const modal = document.createElement('div');
-    modal.id = 'skaters-modal';
-    modal.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center;
-        z-index: 10000; font-family: 'Outfit', sans-serif; padding: 20px;
-    `;
-
-    if (!data || data.note) {
-        modal.innerHTML = `
-            <div style="background: #000; border: 1px solid rgba(212,175,55,0.3); border-radius: 4px; max-width: 400px; width: 100%; padding: 40px; text-align: center;">
-                <h2 style="color: var(--accent-gold); margin-bottom: 15px;">${genderLabel} ${distLabel}</h2>
-                <p style="color: #888; margin-bottom: 20px;">${data?.note || 'No data available for this distance yet.'}</p>
-                <button onclick="document.getElementById('skaters-modal').remove()" class="btn btn-primary">Close</button>
-            </div>
-        `;
-    } else {
-        modal.innerHTML = `
-            <div style="background: #000; border: 1px solid rgba(212,175,55,0.3); border-radius: 4px; max-width: 550px; width: 100%; max-height: 98vh; overflow-y: auto; box-shadow: 0 0 60px rgba(0,0,0,1);">
-                <div style="padding: 20px 30px; display: flex; flex-direction: column; gap: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <button id="insta-download-btn" onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn btn-sm" style="background: #333; color:white; border:none; border-radius: 4px; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px; padding: 6px 12px; cursor: pointer; opacity: 0.6;">PREPARING...</button>
-                        <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; line-height: 1;">&times;</button>
-                    </div>
-
-                    <div style="border-left: 6px solid #D4AF37; padding-left: 15px; margin-bottom: 15px;">
-                        <div style="font-size: 13px; letter-spacing: 6px; color: #888; text-transform: uppercase; font-weight: 500; margin-bottom: 2px;">${getBranding('SHORT_EVENT_NAME')}</div>
-                        <h1 style="font-size: 38px; margin: 0; color: #fff; text-transform: uppercase; font-weight: 900; line-height: 0.85; letter-spacing: -1px;">
-                            ${genderLabel}<br><span style="color: #D4AF37;">${distLabel}</span>
-                        </h1>
-                        <div style="margin-top: 10px; font-size: 14px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 3px;">
-                            Skaters To Watch <span style="color: #D4AF37;">//</span> ${listSubHeader}
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 40px 1fr 140px; border-bottom: 2px solid #D4AF37; padding-bottom: 6px; margin-bottom: 8px; color: #555; font-size: 11px; text-transform: uppercase; font-weight: 900; letter-spacing: 2px;">
-                        <span>#</span><span>Athlete</span><span style="text-align: right;">${valueHeader}</span>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column;">
-                        ${data.skaters.map((s, i) => `
-                            <div style="display: grid; grid-template-columns: 40px 1fr 140px; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                                <span style="font-size: 16px; font-weight: 900; color: ${i < 3 ? '#D4AF37' : '#666'}; font-style: italic;">${s.rank}</span>
-                                <span style="font-size: 16px; font-weight: 800; text-transform: uppercase; color: #fff;">${s.name}</span>
-                                <span style="font-size: 18px; font-weight: 900; font-family: monospace; color: #fff; text-align: right;">${s.time}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div style="margin-top: 15px; padding-top: 10px; border-top: 2px solid rgba(212, 175, 55, 0.2); display: flex; justify-content: space-between; align-items: center;">
-                        <div style="font-size: 14px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase;">
-                            <span style="color: #fff;">@SALTY</span><span style="color: #D4AF37;">GOLD</span><span style="color: #fff;">SUPPLY</span>
-                        </div>
-                        <div style="font-size: 10px; color: #888; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">SALTYGOLDSUPPLY.COM</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-    document.body.appendChild(modal);
-
-    if (data && !data.note) {
-        preRenderSkatersImage(gender, dist);
-    }
-}
-
-function preRenderSkatersImage(gender, dist) {
-    const data = getSkatersToWatchData(gender, dist);
-    if (!data || data.note) return;
-
-    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
-    const distLabel = dist === 'mass_start' ? 'MASS START' : dist.toUpperCase();
-    const listSubHeader = dist === 'mass_start' ? 'Current Standings' : '2026 Season Bests';
-    const valueHeader = dist === 'mass_start' ? 'Points' : 'Performance';
-
-    const exportContainer = document.createElement('div');
-    exportContainer.style.cssText = `
-        position: fixed; top: 0; left: -9999px; width: 1080px; height: 1350px; background: #000;
-        color: white; font-family: 'Outfit', sans-serif; padding: 0; box-sizing: border-box;
-        z-index: -9999; display: flex; flex-direction: column; overflow: hidden;
-    `;
-
-    exportContainer.innerHTML = `
-        <div style="padding: 40px 70px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; background: #000;">
-            <div style="border-left: 10px solid #D4AF37; padding-left: 30px; margin-bottom: 25px; position: relative;">
-                <div style="font-size: 24px; letter-spacing: 12px; color: #888; text-transform: uppercase; font-weight: 500; margin-bottom: 5px;">${getBranding('SHORT_EVENT_NAME')}</div>
-                <h1 style="font-size: 100px; margin: 0; color: #fff; text-transform: uppercase; font-weight: 900; line-height: 0.8; letter-spacing: -3px;">
-                    ${genderLabel}<br><span style="color: #D4AF37;">${distLabel}</span>
-                </h1>
-                <div style="margin-top: 15px; font-size: 22px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 5px;">
-                    Skaters to Watch <span style="color: #D4AF37;">//</span> ${listSubHeader}
-                </div>
-                <div style="position: absolute; top: 0; right: 0; text-align: right; opacity: 0.9;">
-                    <div style="font-size: 16px; font-weight: 900; letter-spacing: 5px;"><span style="color: #fff;">SALTY</span> <span style="color: #D4AF37;">GOLD</span></div>
-                    <div style="font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 2px;">SUPPLY</div>
-                </div>
-            </div>
-
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <div style="display: grid; grid-template-columns: 80px 1fr 380px; border-bottom: 3px solid #D4AF37; padding-bottom: 10px; margin-bottom: 5px; color: #666; font-size: 18px; text-transform: uppercase; font-weight: 900; letter-spacing: 3px;">
-                    <span>Rank</span><span>Athlete</span><span style="text-align: right;">${valueHeader}</span>
-                </div>
-                ${data.skaters.slice(0, 10).map((s, i) => `
-                    <div style="display: grid; grid-template-columns: 80px 1fr 380px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08);">
-                        <span style="font-size: 32px; font-weight: 900; color: ${i < 3 ? '#D4AF37' : '#888'}; font-style: italic;">${s.rank}</span>
-                        <span style="font-size: 34px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${s.name}</span>
-                        <span style="font-size: 42px; font-weight: 900; font-family: monospace; color: #fff; text-align: right;">${s.time}</span>
-                    </div>
-                `).join('')}
-            </div>
-
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid rgba(212, 175, 55, 0.3); display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 36px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; line-height: 1;"><span style="color: #fff;">@SALTY</span><span style="color: #D4AF37;">GOLD</span><span style="color: #fff;">SUPPLY</span></div>
-                <div style="font-size: 20px; color: #888; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">SALTYGOLDSUPPLY.COM</div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(exportContainer);
-
-    setTimeout(() => {
-        html2canvas(exportContainer, { scale: 1, useCORS: true, backgroundColor: '#000', logging: false }).then(canvas => {
-            document.body.removeChild(exportContainer);
-            canvas.toBlob(blob => {
-                currentWatchListBlob = blob;
-                currentWatchListFileName = `SaltyGold_${dist}_WatchList.png`;
-
-                const btn = document.getElementById('insta-download-btn');
-                if (btn) {
-                    btn.style.background = 'linear-gradient(45deg, #f09433, #dc2743, #bc1888, #8a3ab9)';
-                    btn.style.opacity = '1';
-                    btn.innerText = 'CREATE INSTA POST';
-                }
-            }, 'image/png');
-        }).catch(err => {
-            console.error(err);
-            if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
-        });
-    }, 1000);
-}
-
-function downloadSkatersImage(gender, dist) {
-    if (!currentWatchListBlob) {
-        showToast('Still crafting your graphic... Please wait!');
-        return;
-    }
-
-    const file = new File([currentWatchListBlob], currentWatchListFileName, { type: 'image/png' });
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({
-            files: [file],
-            title: 'Skaters to Watch',
-            text: `Check out these athletes! ${getBranding('HASHTAG')}`
-        }).then(() => showToast('Shared successfully!')).catch(() => saveAsFile(currentWatchListBlob, currentWatchListFileName));
-    } else {
-        saveAsFile(currentWatchListBlob, currentWatchListFileName);
-    }
-}
-
 // Share MS Standings as PDF
-
 function shareMsStandingsPdf() {
     const gender = appState.viewGender;
     const standings = calculateMassStartStandings(gender);
@@ -1789,8 +1528,8 @@ function shareMsStandingsPdf() {
         </head>
         <body>
             <div class="header">
-                <div class="header-top">★ ${getBranding('EVENT_NAME').toUpperCase()} ★</div>
-                <div class="header-title">🏆 Mass Start Standings</div>
+                <div class="header-top">??? ${getBranding('EVENT_NAME').toUpperCase()} ???</div>
+                <div class="header-title">???? Mass Start Standings</div>
                 <div class="header-subtitle">${genderLabel} Overall Points</div>
             </div>
             <p class="subtitle">Accumulated points from Races 1-4 (Best 3 of 4 for official selection)</p>
@@ -1811,9 +1550,9 @@ function shareMsStandingsPdf() {
         const rank = i + 1;
         let rankClass = '';
         let medalEmoji = '';
-        if (rank === 1) { rankClass = 'rank-1'; medalEmoji = '🥇'; }
-        if (rank === 2) { rankClass = 'rank-2'; medalEmoji = '🥈'; }
-        if (rank === 3) { rankClass = 'rank-3'; medalEmoji = '🥉'; }
+        if (rank === 1) { rankClass = 'rank-1'; medalEmoji = '????'; }
+        if (rank === 2) { rankClass = 'rank-2'; medalEmoji = '????'; }
+        if (rank === 3) { rankClass = 'rank-3'; medalEmoji = '????'; }
         return `
                     <tr>
                         <td class="${rankClass}">${medalEmoji}${rank}</td>
@@ -1844,7 +1583,7 @@ function shareMsStandingsPdf() {
         printWindow.print();
     }, 500);
 
-    showToast('PDF ready to print/save 📄');
+    showToast('PDF ready to print/save ????');
 }
 
 // Show Skaters to Watch modal
@@ -1877,7 +1616,7 @@ function showSkatersToWatch(gender, dist) {
                         <tr>
                             <td>${s.rank}</td>
                             <td style="font-weight:bold;">
-                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ↗</a>` : s.name}
+                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ???</a>` : s.name}
                             </td>
                             <td><strong>${s.time}</strong></td>
                             <td>${s.notes ? '<span style="color:#D4AF37; font-size:11px;">' + s.notes + '</span>' : ''}</td>
@@ -1904,9 +1643,9 @@ function showSkatersToWatch(gender, dist) {
     modal.innerHTML = `
         <div style="background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #D4AF37; font-size: 1.1rem;">👀 ${genderLabel} ${distLabel}</h3>
+                <h3 style="margin: 0; color: #D4AF37; font-size: 1.1rem;">???? ${genderLabel} ${distLabel}</h3>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    ${!data.note ? `<button onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.8rem; padding: 4px 10px;">📸 Insta Post</button>` : ''}
+                    ${!data.note ? `<button onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.8rem; padding: 4px 10px;">???? Insta Post</button>` : ''}
                     <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
                 </div>
             </div>
@@ -1933,7 +1672,7 @@ function showSkatersToWatch(gender, dist) {
                         <tr>
                             <td>${s.rank}</td>
                             <td style="font-weight:bold;">
-                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ↗</a>` : s.name}
+                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ???</a>` : s.name}
                             </td>
                             <td><strong>${s.time}</strong></td>
                             <td>${s.notes ? '<span style="color:#D4AF37; font-size:11px;">' + s.notes + '</span>' : ''}</td>
@@ -2000,7 +1739,7 @@ function downloadSkatersImage(gender, dist) {
     `;
 
     document.body.appendChild(exportContainer);
-    showToast('Generating high-res graphic... 🎨');
+    showToast('Generating high-res graphic... ????');
 
     html2canvas(exportContainer, {
         scale: 1, // Already set to high res dimensions
@@ -2022,9 +1761,9 @@ function downloadSkatersImage(gender, dist) {
                 navigator.share({
                     files: [file],
                     title: 'Skaters to Watch',
-                    text: `Check out the Season Bests for the ${getBranding('SHORT_EVENT_NAME')}! 🇺🇸⛸️`
+                    text: `Check out the Season Bests for the ${getBranding('SHORT_EVENT_NAME')}! ??????????????`
                 })
-                    .then(() => showToast('Shared successfully! 🚀'))
+                    .then(() => showToast('Shared successfully! ????'))
                     .catch((error) => {
                         console.log('Error sharing:', error);
                         // Fallback if user cancels or share fails
@@ -2047,7 +1786,7 @@ function saveAsFile(blob, fileName) {
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
     link.click();
-    showToast('Image downloaded! 📸');
+    showToast('Image downloaded! ????');
 }
 
 function exportData() {
@@ -2066,7 +1805,7 @@ function toggleAdminMode() {
         if (password === "admin123") { // Simple protection
             appState.isAdmin = true;
             document.body.classList.add('admin-mode');
-            document.getElementById('admin-login-btn').innerText = "🔓 Admin Active";
+            document.getElementById('admin-login-btn').innerText = "???? Admin Active";
             alert("Admin Mode Unlocked");
         } else {
             alert("Incorrect Password");
@@ -2074,7 +1813,7 @@ function toggleAdminMode() {
     } else {
         appState.isAdmin = false;
         document.body.classList.remove('admin-mode');
-        document.getElementById('admin-login-btn').innerText = "🔒 Admin";
+        document.getElementById('admin-login-btn').innerText = "???? Admin";
         // If on a hidden tab, switch to dashboard
         if (['events', 'athletes'].includes(appState.currentTab)) {
             appState.currentTab = 'dashboard';
@@ -2131,11 +1870,11 @@ function downloadShareCard() {
             if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
                     files: [file],
-                    title: `${getBranding('TEAM_NAME')} Qualifier 🇺🇸`,
+                    title: `${getBranding('TEAM_NAME')} Qualifier ????????`,
                     text: `Officially Qualified! ${getBranding('HASHTAG')}`
                 })
                     .then(() => {
-                        btn.innerText = 'Shared! 🚀';
+                        btn.innerText = 'Shared! ????';
                         setTimeout(() => btn.innerText = originalText, 2000);
                     })
                     .catch((error) => {
@@ -2168,7 +1907,7 @@ async function shareApp() {
     if (isLocal) {
         // Warning for the admin/user testing this feature
         const usePlaceholder = confirm(
-            "⚠️ You are sharing from Localhost.\n\n" +
+            "?????? You are sharing from Localhost.\n\n" +
             "The link 'localhost' only works on YOUR computer. If you share this email/text, others won't be able to open it.\n\n" +
             "Click OK to share a PLACEHOLDER Public URL instead (for testing).\n" +
             "Click Cancel to allow sharing the Localhost link anyway."
@@ -2195,7 +1934,7 @@ async function shareApp() {
         // Fallback to clipboard
         try {
             await navigator.clipboard.writeText(urlToShare);
-            showToast('Link copied to clipboard! 📋');
+            showToast('Link copied to clipboard! ????');
         } catch (err) {
             console.error('Failed to copy', err);
             prompt('Copy this link:', urlToShare);
