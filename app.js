@@ -50,15 +50,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initializeState() {
-    ['women', 'men'].forEach(gender => {
-        if (!appState.events[gender]) appState.events[gender] = {};
-        Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
-            if (!appState.events[gender][dist]) {
-                appState.events[gender][dist] = { results: [], status: 'pending' };
+    try {
+        ['women', 'men'].forEach(gender => {
+            if (!appState.events[gender]) appState.events[gender] = {};
+            // Ensure team_pursuit is initialized if not present (config update support)
+            if (!OLYMPIC_CONFIG[gender]['team_pursuit']) {
+                console.warn('Team Pursuit config missing');
             }
+
+            Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
+                if (!appState.events[gender][dist]) {
+                    appState.events[gender][dist] = { results: [], status: 'pending' };
+                }
+            });
         });
-    });
-    await loadFromStorage();
+        await loadFromStorage();
+    } catch (e) {
+        console.error("Init Error:", e);
+        alert("CRITICAL ERROR Initializing App: " + e.message);
+    }
 }
 
 async function loadFromStorage() {
@@ -154,7 +164,7 @@ function renderCurrentTab() {
         case 'events': main.innerHTML = renderEventEntry(); break;
         case 'athletes': main.innerHTML = renderAthletes(); break;
         case 'help': main.innerHTML = renderRules(); break;
-        case 'results': main.innerHTML = renderMassStartStandings(); break;
+        case 'results': main.innerHTML = renderStandings(); break;
     }
 
     // Post-render hooks
@@ -174,8 +184,8 @@ function renderDashboard() {
     const menStats = calculateReduction('men');
     const womenStats = calculateReduction('women');
 
-    // Calculate filled spots - ONLY count actual athletes, not placeholders like "Team Pursuit Slot X"
-    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot');
+    // Calculate filled spots - ONLY count actual athletes, not placeholders like "Team Pursuit Specialist X"
+    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Specialist');
     const menRealAthletes = menStats.roster.filter(a => isRealAthlete(a.name));
     const womenRealAthletes = womenStats.roster.filter(a => isRealAthlete(a.name));
 
@@ -245,7 +255,7 @@ function renderOlympicTeamTracker() {
         const { roster: fullRoster, teamCap } = calculateReduction(gender);
 
         // Filter out placeholder entries - only count real athletes
-        const isRealAthlete = (name) => !name.startsWith('Team Pursuit Slot');
+        const isRealAthlete = (name) => !name.startsWith('Team Pursuit Specialist');
         const roster = fullRoster.filter(a => isRealAthlete(a.name));
 
         const qualifiedCount = roster.length;
@@ -300,25 +310,31 @@ function renderOlympicTeamTracker() {
             </div>
 
             <div class="card mb-2">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>Predicted Team Roster</h3>
-                    <span class="text-muted text-sm">Sorted by Reduction Priority (1 = Protected/Highest)</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h3 style="margin:0;">Predicted Team Roster</h3>
+                        <span class="text-muted text-sm">Sorted by Reduction Priority (1 = Protected/Highest)</span>
+                    </div>
+                    <div class="btn-group">
+                        <button onclick="shareOlympicTeamImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">📸 Insta Post</button>
+                        <button onclick="shareOlympicTeamPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">📄 PDF</button>
+                    </div>
                 </div>
                 
-                <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th style="width:50px">Row</th>
-                            <th>Athlete</th>
-                            <th>Qualifying Basis</th>
-                            <th>Priority Rank</th>
-                            <th>Status</th>
-                            <th style="width:60px">Share</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${fullRoster.slice(0, teamCap).map((t, idx) => {
+        <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width:50px">Row</th>
+                    <th>Athlete</th>
+                    <th>Qualifying Basis</th>
+                    <th>Priority Rank</th>
+                    <th>Status</th>
+                    <th style="width:60px">Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${fullRoster.slice(0, teamCap).map((t, idx) => {
             let displayRank = t.reductionRank === 0 ? '1 (Protected)' : t.reductionRank;
 
             // Custom Display for Team Pursuit (User Request)
@@ -337,31 +353,33 @@ function renderOlympicTeamTracker() {
                                     ${t.reductionRank === 0 ? '<span class="status-qualified">🔒 Protected</span>' : '<span class="status-qualified">✅ On Team</span>'}
                                 </td>
                                 <td>
-                                    ${!t.name.includes("Slot") && !t.name.includes("Available") ?
+                                    ${!t.name.includes("Slot") && !t.name.includes("Specialist") && !t.name.includes("Available") ?
                     `<button class="btn btn-sm" onclick="openShareModal('${t.name}')" style="background:#D4AF37; padding:2px 8px; font-size:12px;">📸</button>`
                     : ''}
                                 </td>
                             </tr>
-                        `;
+            `;
         }).join('')}
-                        ${fullRoster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
-                    </tbody>
-                </table>
-                </div>
+                ${fullRoster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
+            </tbody>
+        </table>
+        </div>
+    </div>
             </div>
-
+            
             <div class="card">
                 <h3>Distance Breakdown & Quota Tracking</h3>
                 ${renderDistanceBreakdown(gender)}
             </div>
+
         `;
-    } catch (e) {
-        console.error("Render Error:", e);
-        return `<div class="card alert-error"><h3>Error Loading Tracker</h3><p>${e.message}</p><pre>${e.stack}</pre></div>`;
-    }
+    } catch (err) { console.error(err); return `<div class="alert-error">Error loading tracker: ${err.message}</div>`; }
 }
 
 
+// =============================================================================
+// REDUCTION ENGINE
+// =============================================================================
 function calculateReduction(gender) {
     const rosterMap = {}; // name -> {name, events: [], rank: 999}
     const teamCap = OLYMPIC_CONFIG.TEAM_CAP[gender];
@@ -397,16 +415,23 @@ function calculateReduction(gender) {
             const specialists = appState.events[gender]['team_pursuit']?.results || [];
             const conversion = OLYMPIC_CONFIG.TP_CONVERSION[gender]; // 0 (Protected)
 
-            // 1. Add Named Specialists
-            specialists.forEach(s => {
+            // MAX 2 SPECIALISTS PROTECTED
+            // Any additional valid specialists beyond 2 will NOT be protected (fall to worst rank) or ignored?
+            // "Up to 2 skaters... will be protected". 
+            // So default to only processing up to 2.
+            const maxProtected = 2; // Hard cap per User Request
+            const protectedList = specialists.slice(0, maxProtected);
+
+            // 1. Add Named Specialists (Protected)
+            protectedList.forEach(s => {
                 qualifiers.push({ name: s.name, ranking: conversion, type: 'TpSpec' });
             });
 
-            // 2. Add Placeholders for empty spots (Up to Quota 3)
-            // This ensures the 3 protected spots are visible in the roster immediately
-            for (let i = specialists.length; i < config.quota; i++) {
-                qualifiers.push({ name: `Team Pursuit Slot ${i + 1}`, ranking: conversion, type: 'TpSpec' });
-            }
+            // 2. Add Placeholders for empty spots (Up to 2)
+            // REMOVED per user request: Only count specialists when names are added.
+            // for (let i = protectedList.length; i < maxProtected; i++) {
+            //     qualifiers.push({ name: `Team Pursuit Specialist ${i + 1}`, ranking: conversion, type: 'TpSpec' });
+            // }
         } else {
             trialsResults = (appState.events[gender][dist].results || []).sort((a, b) => a.rank - b.rank);
         }
@@ -476,18 +501,16 @@ function calculateReduction(gender) {
         });
     });
 
-    // 2. Sort buffer
-    // Primary: Reduction Rank (Ascending) -> 0 is best
-    // Secondary: If tied? Tiebreaker rules.
-    // Rule: "Higher total WC points", "Faster combined WC times", "Best individual finish"
-    // Since we don't have WC points data here, we'll just allow ties effectively or stable sort.
+    // 2. Convert to Array and Sort by Reduction Rank (0 = Protected, 1 = Best SOQC, 99 = Worst)
+    // Tie Breaker for cuts: 
+    // "If a tie exists for the last selection, the tie will be broken by..."
+    // For now, simple sort.
+    const roster = Object.values(rosterMap).sort((a, b) => {
+        if (a.reductionRank !== b.reductionRank) return a.reductionRank - b.reductionRank;
+        return a.name.localeCompare(b.name); // Alpha tie break
+    });
 
-    const sortedRoster = Object.values(rosterMap).sort((a, b) => a.reductionRank - b.reductionRank);
-
-    // 3. Mark cuts
-    // (Handled in the render function by index comparison with Team Cap)
-
-    return { roster: sortedRoster, teamCap };
+    return { roster, teamCap };
 }
 
 function renderDistanceBreakdown(gender) {
@@ -550,34 +573,47 @@ function renderDistanceBreakdown(gender) {
                      <h4 style="margin:0 0 5px 0; border-bottom:2px solid #eee; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                         <span>${dist}</span>
                         <span style="display:flex; align-items:center; gap:8px;">
+                             ${appState.events[gender][dist].pdfUrl ?
+                `<a href="${appState.events[gender][dist].pdfUrl}" target="_blank" class="btn btn-sm" style="background:#5cb85c; padding:2px 6px; font-size:11px; text-decoration:none;" title="View Official Results">📄 Results</a>` :
+                (appState.isAdmin ? `<button class="btn btn-sm" onclick="promptPdfUpload('${gender}', '${dist}')" style="background:#444; padding:2px 6px; font-size:11px;" title="Upload Results PDF">📎 Upload</button>` : '')
+            }
                             <button class="btn btn-sm" onclick="showSkatersToWatch('${gender}', '${dist}')" style="background:#337ab7; padding:2px 6px; font-size:11px;" title="Skaters to Watch">👀</button>
                             <span>Quota: ${config.quota}</span>
                         </span>
                     </h4>
                     <ul style="list-style:none; padding:0; margin:0;">
                          ${displayList.map(s => {
-            let bgColor = '#5cb85c'; // Default green for Trials qualifiers
-            let textColor = '#fff';
-            if (s.type === 'Direct' || s.type === 'Protected') {
-                bgColor = '#d9534f'; textColor = '#fff';
-            } else if (s.type === 'HP Discretion') {
-                bgColor = '#888'; textColor = '#fff';
-            } else if (s.type === 'O. Trials' && s.name === 'Available') {
-                bgColor = '#337ab7'; textColor = '#fff';
-            }
-            return `
+                let bgColor = '#5cb85c'; // Default green for Trials qualifiers
+                let textColor = '#fff';
+                if (s.type === 'Direct' || s.type === 'Protected') {
+                    bgColor = '#d9534f'; textColor = '#fff';
+                } else if (s.type === 'HP Discretion') {
+                    bgColor = '#888'; textColor = '#fff';
+                } else if (s.type === 'O. Trials' && s.name === 'Available') {
+                    bgColor = '#337ab7'; textColor = '#fff';
+                }
+                return `
                             <li style="padding:4px 0; border-bottom:1px dashed #ccc; display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-weight:500">${s.name}</span>
                                 <span class="badge" style="background:${bgColor}; color:${textColor}">${s.type}</span>
                             </li>
                         `;
-        }).join('')}
+            }).join('')}
                     </ul>
                 </div>
             `;
     }).join('')}
         </div>
     `;
+}
+
+function promptPdfUpload(gender, dist) {
+    const url = prompt("Enter URL for Official Results PDF:");
+    if (url) {
+        appState.events[gender][dist].pdfUrl = url;
+        saveToStorage();
+        renderCurrentTab();
+    }
 }
 
 
@@ -609,6 +645,74 @@ function renderEventEntry() {
             </div>
             <div id="ms-entry-container"></div>
         `;
+    } else if (dist === '500m') {
+        const race = appState.selected500mRace || 1;
+        // Ensure sub-races exist
+        if (!appState.events[gender]['500m'].races) {
+            appState.events[gender]['500m'].races = { 1: [], 2: [] };
+        }
+        const results = appState.events[gender]['500m'].races[race] || [];
+        // Sort by rank implicitly (order of entry?) or best not to sort here if raw
+        // Let's assume order of entry matches rank unless rearranged. But typically users enter 1, 2, 3...
+        // We will just render them. 
+
+        // Prepare datalist for autocomplete
+        const existingAthletes = appState.athletes.filter(a => a.gender === gender);
+        const dataListHtml = `
+            <datalist id="athlete-names">
+                ${existingAthletes.map(a => `<option value="${a.name}">`).join('')}
+            </datalist>
+        `;
+
+        content += `
+             <div class="card mt-2">
+                <h3>🏁 ${gender === 'women' ? "Women's" : "Men's"} 500m</h3>
+                <p class="text-muted">Best time of 2 races counts. Enter results for both races below.</p>
+
+                <div class="race-tabs mb-1">
+                    <button class="race-tab ${race === 1 ? 'active' : ''}" onclick="appState.selected500mRace=1; renderCurrentTab()">Race 1</button>
+                    <button class="race-tab ${race === 2 ? 'active' : ''}" onclick="appState.selected500mRace=2; renderCurrentTab()">Race 2</button>
+                </div>
+
+                <div style="background:#222; border:1px solid #444; border-radius:8px; padding:15px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong>📱 Smart Results Paste (Race ${race})</strong>
+                    </div>
+                    <textarea id="smart-paste-area" class="form-control" rows="3" placeholder="Paste messed up text from your phone photo here..."></textarea>
+                    <button class="btn btn-primary mt-2 w-100" onclick="processSmartPaste()">✨ Process & Add to Race ${race}</button>
+                    <div id="smart-status" style="margin-top:5px; font-size:0.9em; color:#aaa;"></div>
+                </div>
+
+                <div class="form-group mb-1 p-2" style="background:#f9f9f9; border-radius:8px;">
+                     <div style="display:flex; gap:10px; align-items:center;">
+                        <span style="font-weight:bold; font-size:1.2em; width:30px; text-align:center;">${results.length + 1}.</span>
+                        <div style="flex:2">
+                            <input type="text" id="athlete-input" list="athlete-names" class="form-control" placeholder="Type Athlete Name" autocomplete="off">
+                            ${dataListHtml}
+                        </div>
+                        <div style="flex:1">
+                            <input type="text" id="manual-time" class="form-control" placeholder="Time (34.50)">
+                        </div>
+                        <button class="btn btn-primary" onclick="addEventResult()">Add</button>
+                    </div>
+                </div>
+
+                <table class="data-table mt-1">
+                    <thead><tr><th style="width:50px">Rank</th><th>Athlete</th><th>Time</th><th>Action</th></tr></thead>
+                    <tbody>
+                        ${results.map((r, i) => `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${r.name}</td>
+                                <td>${r.time || '-'}</td>
+                                <td><button class="btn btn-sm btn-danger" onclick="removeEventResult(${i})"> Remove</button></td>
+                            </tr>
+                        `).join('')}
+                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center text-muted">No entries yet for Race ${race}.</td></tr>` : ''}
+                    </tbody>
+                </table>
+             </div>
+        `;
     } else {
         const isTP = (dist === 'team_pursuit');
         const results = appState.events[gender][dist].results || [];
@@ -625,8 +729,17 @@ function renderEventEntry() {
         content += `
             <div class="card mt-2">
                 <h3>🏁 ${gender === 'women' ? "Women's" : "Men's"} ${dist}</h3>
-                <p class="text-muted">${isTP ? "Type names of Team Pursuit Specialists." : "Type names in finishing order (1st, 2nd, etc). New names will be auto-added."}</p>
+                <p class="text-muted">${isTP ? "Type names of Team Pursuit Specialists." : "Type names in finishing order (1st, 2nd, etc)."}</p>
                 
+                <div style="background:#222; border:1px solid #444; border-radius:8px; padding:15px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong>📱 Smart Results Paste</strong>
+                    </div>
+                    <textarea id="smart-paste-area" class="form-control" rows="3" placeholder="Paste messed up text from your phone photo here..."></textarea>
+                    <button class="btn btn-primary mt-2 w-100" onclick="processSmartPaste()">✨ Process & Add</button>
+                    <div id="smart-status" style="margin-top:5px; font-size:0.9em; color:#aaa;"></div>
+                </div>
+
                 <div class="form-group mb-1 p-2" style="background:#f9f9f9; border-radius:8px;">
                      <div style="display:flex; gap:10px; align-items:center;">
                         <span style="font-weight:bold; font-size:1.2em; width:30px; text-align:center;">${results.length + 1}.</span>
@@ -661,6 +774,89 @@ function renderEventEntry() {
     return content;
 }
 
+function processSmartPaste() {
+    const text = document.getElementById('smart-paste-area').value;
+    if (!text) return;
+
+    const lines = text.split('\n');
+    let addedCount = 0;
+    const dist = appState.viewDistance;
+    const gender = appState.viewGender;
+
+    lines.forEach(line => {
+        let clean = line.trim();
+        if (!clean) return;
+
+        // Logic: Extract Rank, Name, Time
+        const timeMatch = clean.match(/(\d{1,2}[:.])?\d{2}\.\d{2}/);
+        let time = '';
+        let name = clean;
+
+        if (timeMatch) {
+            time = timeMatch[0];
+            name = name.replace(time, '').replace(/PB|SB|NR|TR|DNF|DNS|DQ/gi, '');
+        }
+
+        // Remove Rank (Digits at start)
+        name = name.replace(/^\d+[\.\-\)]*\s*/, '');
+
+        // Remove Nation (USA)
+        name = name.replace(/\(USA\)|\bUSA\b/gi, '')
+            .replace(/[^\w\s-]/g, '') // Remove weird symbols
+            .trim();
+
+        if (name) {
+            let athlete = appState.athletes.find(a => a.name.toLowerCase() === name.toLowerCase() && a.gender === gender);
+            if (!athlete) {
+                appState.athletes.push({
+                    id: Date.now().toString() + Math.random().toString().slice(2, 5),
+                    name: name,
+                    nation: 'USA',
+                    gender: gender
+                });
+            }
+
+            if (dist === '500m') {
+                const race = appState.selected500mRace || 1;
+                if (!appState.events[gender]['500m'].races) appState.events[gender]['500m'].races = { 1: [], 2: [] };
+                const raceList = appState.events[gender]['500m'].races[race];
+
+                if (!raceList.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+                    raceList.push({
+                        id: athlete ? athlete.id : Date.now().toString(),
+                        name: name,
+                        rank: raceList.length + 1,
+                        time: time
+                    });
+                    addedCount++;
+                }
+            } else {
+                const currentResults = appState.events[gender][dist].results || [];
+                if (!currentResults.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+                    appState.events[gender][dist].results.push({
+                        id: athlete ? athlete.id : (Date.now().toString()),
+                        name: name,
+                        rank: currentResults.length + 1,
+                        time: time
+                    });
+                    addedCount++;
+                }
+            }
+        }
+    });
+
+    if (dist === '500m') recalculate500mStandings(gender);
+
+    if (addedCount > 0) {
+        document.getElementById('smart-paste-area').value = '';
+        document.getElementById('smart-status').innerText = `✅ Added ${addedCount} results!`;
+        saveToStorage();
+        setTimeout(() => renderCurrentTab(), 1000);
+    } else {
+        document.getElementById('smart-status').innerText = `⚠️ No valid results found.`;
+    }
+}
+
 function renderEventSelectors() {
     return `
         <div class="filter-bar">
@@ -693,7 +889,7 @@ function addEventResult() {
     const name = nameInput.value.trim();
     if (!name) return;
 
-    // Time is optional
+    // Time is optional but recommended
     const timeInput = document.getElementById('manual-time');
     const time = timeInput ? timeInput.value : '';
 
@@ -709,25 +905,51 @@ function addEventResult() {
             gender: appState.viewGender
         };
         appState.athletes.push(athlete);
-        // Don't save yet, will save at end of function
     }
 
-    const currentResults = appState.events[appState.viewGender][appState.viewDistance].results || [];
+    const dist = appState.viewDistance;
+    const gender = appState.viewGender;
 
-    // Check duplicates
-    if (currentResults.some(r => r.name.toLowerCase() === name.toLowerCase())) {
-        alert('Athlete already added to this event.');
-        return;
+    if (dist === '500m') {
+        const race = appState.selected500mRace || 1;
+        if (!appState.events[gender]['500m'].races) {
+            appState.events[gender]['500m'].races = { 1: [], 2: [] };
+        }
+
+        const raceList = appState.events[gender]['500m'].races[race];
+        // Check duplicate in this specific race
+        if (raceList.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+            alert(`Athlete already added to Race ${race}`);
+            return;
+        }
+
+        raceList.push({
+            id: athlete.id,
+            name: athlete.name,
+            rank: raceList.length + 1,
+            time: time
+        });
+
+        recalculate500mStandings(gender);
+    } else {
+        // Standard Event
+        const currentResults = appState.events[gender][dist].results || [];
+
+        // Check duplicates
+        if (currentResults.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+            alert('Athlete already added to this event.');
+            return;
+        }
+
+        // Add Result
+        const rank = currentResults.length + 1;
+        appState.events[gender][dist].results.push({
+            id: athlete.id,
+            name: athlete.name,
+            rank: rank,
+            time: time
+        });
     }
-
-    // Add Result
-    const rank = currentResults.length + 1;
-    appState.events[appState.viewGender][appState.viewDistance].results.push({
-        id: athlete.id,
-        name: athlete.name,
-        rank: rank,
-        time: time
-    });
 
     saveToStorage();
     renderCurrentTab();
@@ -740,16 +962,69 @@ function addEventResult() {
 }
 
 function removeEventResult(index) {
-    const results = appState.events[appState.viewGender][appState.viewDistance].results;
-    results.splice(index, 1);
+    const gender = appState.viewGender;
+    const dist = appState.viewDistance;
 
-    // Re-calculate ranks
-    results.forEach((r, idx) => {
-        r.rank = idx + 1;
-    });
+    if (dist === '500m') {
+        const race = appState.selected500mRace || 1;
+        if (appState.events[gender]['500m'].races && appState.events[gender]['500m'].races[race]) {
+            appState.events[gender]['500m'].races[race].splice(index, 1);
+            recalculate500mStandings(gender);
+        }
+    } else {
+        const results = appState.events[gender][dist].results;
+        results.splice(index, 1);
+        // Re-calculate ranks
+        results.forEach((r, idx) => {
+            r.rank = idx + 1;
+        });
+    }
 
     saveToStorage();
     renderCurrentTab();
+}
+
+function recalculate500mStandings(gender) {
+    // Merge R1 and R2 results, take best time
+    const r1 = appState.events[gender]['500m'].races?.[1] || [];
+    const r2 = appState.events[gender]['500m'].races?.[2] || [];
+
+    // Map of name -> bestTime
+    const bests = {};
+    const process = (list) => {
+        list.forEach(r => {
+            if (!r.time) return;
+            // Parse time (XX.XX)
+            let raw = parseFloat(r.time);
+            if (isNaN(raw)) return;
+
+            if (!bests[r.name] || raw < bests[r.name].val) {
+                bests[r.name] = { val: raw, str: r.time, id: r.id };
+            }
+        });
+    };
+
+    process(r1);
+    process(r2);
+
+    // Convert to array
+    const finalResults = Object.keys(bests).map(name => ({
+        name: name,
+        id: bests[name].id,
+        time: bests[name].str,
+        rawTime: bests[name].val
+    }));
+
+    // Sort
+    finalResults.sort((a, b) => a.rawTime - b.rawTime);
+
+    // Assign Ranks and save to main results
+    appState.events[gender]['500m'].results = finalResults.map((r, i) => ({
+        id: r.id,
+        name: r.name,
+        rank: i + 1,
+        time: r.time
+    }));
 }
 
 
@@ -1005,6 +1280,7 @@ function renderAthletes() {
     `;
 }
 
+
 function editAthlete(idx) {
     const athlete = appState.athletes[idx];
     if (!athlete) return;
@@ -1036,13 +1312,145 @@ function editAthlete(idx) {
 }
 
 function openAthleteModal() {
-    const name = prompt("Athlete Name:");
-    if (!name) return;
-    const gender = prompt("Gender (women/men):", "women").toLowerCase();
-    const nation = "USA";
-    appState.athletes.push({ id: Date.now().toString(), name, nation, gender });
+    const modal = document.getElementById('modal-container');
+    modal.innerHTML = `
+        <div class="modal-backdrop" onclick="closeModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Athletes</h3>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            
+            <div class="tabs-container">
+                <style>
+                    .modal-content { background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333; min-width: 400px; position:relative; z-index:10000; }
+                    .modal-backdrop { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 9999; }
+                    .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+                    .close-btn { background:none; border:none; color:white; font-size: 1.5rem; cursor:pointer;}
+                    .modal-tabs { display: flex; border-bottom: 1px solid #444; margin-bottom: 15px; }
+                    .modal-tab { padding: 10px 20px; background: transparent; border: none; color: #888; cursor: pointer; border-bottom: 2px solid transparent; font-family:inherit; font-size:1rem; }
+                    .modal-tab.active { color: #fff; border-bottom-color: #D4AF37; font-weight: bold; }
+                    .tab-content { display: none; }
+                    .tab-content.active { display: block; }
+                    .drop-zone { border: 2px dashed #444; padding: 30px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.05); }
+                    .drop-zone:hover { border-color: #D4AF37; background: rgba(212, 175, 55, 0.1); }
+                </style>
+                <div class="modal-tabs">
+                    <button class="modal-tab active" onclick="switchModalTab('manual', this)">Manual Entry</button>
+                    <button class="modal-tab" onclick="switchModalTab('bulk', this)">Bulk Import</button>
+                </div>
+                
+                <div id="tab-manual" class="tab-content active">
+                    <div class="form-group mb-2">
+                        <label>Athlete Name</label>
+                        <input type="text" id="new-athlete-name" class="form-control" placeholder="Full Name">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label>Gender</label>
+                        <select id="new-athlete-gender" class="form-control">
+                            <option value="women">Women</option>
+                            <option value="men">Men</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="confirmAddAthlete()">Add Single Athlete</button>
+                </div>
+
+                <div id="tab-bulk" class="tab-content">
+                     <p class="text-muted text-sm mb-2" style="font-size:0.9em; margin-bottom:15px;">Upload an Excel (.xlsx) file with columns: <strong>Name</strong>, <strong>Gender</strong> (opt), <strong>Nation</strong> (opt).</p>
+                    <div class="drop-zone" onclick="document.getElementById('excel-upload').click()">
+                        <p style="margin:0; font-size:1.2em;">📂 Click to Upload Excel</p>
+                        <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display:none" onchange="handleExcelUpload(this)">
+                    </div>
+                     <p class="text-muted text-sm" style="margin-top:10px; font-size:0.8em;">Note: Duplicates will be allowed. Please check list after import.</p>
+                </div>
+            </div>
+        </div>
+    `;
+    // Center it
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.zIndex = '9998';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+}
+
+function switchModalTab(tab, btn) {
+    document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    btn.classList.add('active');
+    document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modal-container').style.display = 'none';
+}
+
+function confirmAddAthlete() {
+    const name = document.getElementById('new-athlete-name').value.trim();
+    const gender = document.getElementById('new-athlete-gender').value;
+
+    if (!name) return alert("Please enter a name");
+
+    appState.athletes.push({
+        id: Date.now().toString(),
+        name: name,
+        nation: 'USA',
+        gender: gender
+    });
+
     saveToStorage();
     renderCurrentTab();
+    closeModal();
+    // alert(`Added ${name}`);
+}
+
+function handleExcelUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(sheet);
+
+            let count = 0;
+            json.forEach(row => {
+                const name = row['Name'] || row['name'] || row['Athlete'] || row['athlete'];
+                let genderRaw = row['Gender'] || row['gender'] || row['Sex'] || '';
+
+                let gender = 'women';
+                if (genderRaw && genderRaw.toLowerCase().startsWith('m')) gender = 'men';
+
+                if (name) {
+                    appState.athletes.push({
+                        id: Date.now().toString() + Math.random().toString().slice(2, 5),
+                        name: name,
+                        nation: row['Nation'] || 'USA',
+                        gender: gender
+                    });
+                    count++;
+                }
+            });
+
+            saveToStorage();
+            renderCurrentTab();
+            closeModal();
+            alert(`✅ Successfully imported ${count} athletes!`);
+        } catch (err) {
+            console.error(err);
+            alert("Error parsing Excel file. Please ensure it is a valid .xlsx file.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
 }
 
 function deleteAthlete(idx) {
@@ -1170,7 +1578,7 @@ function renderRules() {
                                 ${spotsAvailable}
                             </td>
                             <td style="color:#fff; font-family:monospace; font-size:1.4em; font-weight:bold;">
-                                ${isTP ? `Protected` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}
+                                ${isTP ? `Protected (Max 2)` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}
                             </td>
                         </tr>
                     `}).join('')}
@@ -1287,32 +1695,26 @@ function renderRules() {
 // =============================================================================
 // MASS START STANDINGS (PUBLIC VIEW)
 // =============================================================================
-function renderMassStartStandings() {
+// =============================================================================
+// STANDINGS (PUBLIC VIEW)
+// =============================================================================
+function renderStandings() {
     const gender = appState.viewGender;
-    const standings = calculateMassStartStandings(gender);
+    // Default to mass_start if not set
+    if (!appState.viewStandingsDist) appState.viewStandingsDist = 'mass_start';
+    const dist = appState.viewStandingsDist;
 
-    // Filter out athletes with 0 points
-    const filteredStandings = standings.filter(s => s.total > 0);
+    const distances = gender === 'women' ? ['500m', '1000m', '1500m', '3000m', 'mass_start'] : ['500m', '1000m', '1500m', '5000m', 'mass_start'];
 
-    // Get pre-nominated athletes for this gender's mass start
-    const preNominated = OLYMPIC_CONFIG[gender].mass_start?.preNominated || [];
+    // Render Logic based on Distance
+    let content = '';
 
-    return `
-        <div class="section-header" style="flex-direction: row;">
-            <div class="btn-group" style="margin-right: 20px;">
-                <button class="btn ${gender === 'women' ? 'btn-primary' : 'btn-outline-primary'}" 
-                    onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
-                <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
-                    onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
-            </div>
-            <div class="btn-group" style="margin-right: 20px;">
-                <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">📸 Insta Post</button>
-                <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">📄 PDF</button>
-            </div>
-            <h2>🏆 Mass Start Series Standings</h2>
-        </div>
+    if (dist === 'mass_start') {
+        const standings = calculateMassStartStandings(gender);
+        const filteredStandings = standings.filter(s => s.total > 0);
+        const preNominated = OLYMPIC_CONFIG[gender].mass_start?.preNominated || [];
 
-        <div class="card" id="ms-standings-card">
+        content = `
             <h3 style="margin-top:0;">${gender === 'women' ? "Women's" : "Men's"} Overall Points</h3>
             <p class="text-muted">Accumulated points from Races 1-4. (Official selection uses Best 3 of 4).</p>
             
@@ -1331,15 +1733,15 @@ function renderMassStartStandings() {
                     </thead>
                     <tbody>
                         ${filteredStandings.length > 0 ? filteredStandings.map((s, i) => {
-        const rank = i + 1;
-        let rankClass = '';
-        if (rank === 1) rankClass = 'rank-1';
-        if (rank === 2) rankClass = 'rank-2';
-        if (rank === 3) rankClass = 'rank-3';
+            const rank = i + 1;
+            let rankClass = '';
+            if (rank === 1) rankClass = 'rank-1';
+            if (rank === 2) rankClass = 'rank-2';
+            if (rank === 3) rankClass = 'rank-3';
 
-        const isQualified = preNominated.includes(s.name);
+            const isQualified = preNominated.includes(s.name);
 
-        return `
+            return `
                             <tr>
                                 <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${rank}</td>
                                 <td>
@@ -1353,253 +1755,858 @@ function renderMassStartStandings() {
                                 <td class="text-center" style="font-weight:bold; font-size:1.1em; color:#D4AF37;">${s.total}</td>
                             </tr>
                             `;
-    }).join('') : '<tr><td colspan="7" class="text-center text-muted">No results recorded yet.</td></tr>'}
+        }).join('') : '<tr><td colspan="7" class="text-center text-muted">No results recorded yet.</td></tr>'}
                     </tbody>
                 </table>
             </div>
+        `;
+    } else if (dist === '500m') {
+        const results = appState.events[gender]['500m'].results || [];
+        const r1 = appState.events[gender]['500m'].races?.[1] || [];
+        const r2 = appState.events[gender]['500m'].races?.[2] || [];
+        const preNominated = OLYMPIC_CONFIG[gender]['500m']?.preNominated || [];
+
+        // Helper to find time
+        const getT = (list, name) => {
+            const f = list.find(x => x.name === name);
+            return f && f.time ? f.time : '-';
+        };
+
+        content = `
+            <h3 style="margin-top:0; text-transform:capitalize;">${gender === 'women' ? "Women's" : "Men's"} 500m Results</h3>
+            <p class="text-muted">Unofficial results order. Ranking based on the fastest time from either Race 1 or Race 2.</p>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px">Rank</th>
+                            <th>Athlete</th>
+                            <th class="text-center">Race 1</th>
+                            <th class="text-center">Race 2</th>
+                            <th class="text-center">Best</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${results.length > 0 ? results.map((r, i) => {
+            let rankClass = '';
+            if (r.rank === 1) rankClass = 'rank-1';
+            if (r.rank === 2) rankClass = 'rank-2';
+            if (r.rank === 3) rankClass = 'rank-3';
+            const isQualified = preNominated.includes(r.name);
+            const time1 = getT(r1, r.name);
+            const time2 = getT(r2, r.name);
+
+            return `
+                            <tr>
+                                <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${r.rank}</td>
+                                <td>
+                                    <strong>${r.name}</strong>
+                                     ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">✅ Pre-Qualified</span>' : ''}
+                                </td>
+                                <td class="text-center">${time1}</td>
+                                <td class="text-center">${time2}</td>
+                                <td class="text-center" style="font-weight:bold;">${r.time}</td>
+                            </tr>
+                        `;
+        }).join('') : '<tr><td colspan="5" class="text-center text-muted">No results recorded yet.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        // Standard Distance View
+        const results = appState.events[gender][dist]?.results || [];
+        results.sort((a, b) => a.rank - b.rank);
+        const preNominated = OLYMPIC_CONFIG[gender][dist]?.preNominated || [];
+
+        content = `
+            <h3 style="margin-top:0; text-transform:capitalize;">${gender === 'women' ? "Women's" : "Men's"} ${dist.replace('_', ' ')} Results</h3>
+            <p class="text-muted">Unofficial results order.</p>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px">Rank</th>
+                            <th>Athlete</th>
+                            <th class="text-center">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${results.length > 0 ? results.map((r) => {
+            let rankClass = '';
+            if (r.rank === 1) rankClass = 'rank-1';
+            if (r.rank === 2) rankClass = 'rank-2';
+            if (r.rank === 3) rankClass = 'rank-3';
+            const isQualified = preNominated.includes(r.name);
+
+            return `
+                            <tr>
+                                <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${r.rank}</td>
+                                <td>
+                                    <strong>${r.name}</strong>
+                                     ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">✅ Pre-Qualified</span>' : ''}
+                                </td>
+                                <td class="text-center">${r.time || '-'}</td>
+                            </tr>
+                        `;
+        }).join('') : '<tr><td colspan="3" class="text-center text-muted">No results recorded yet.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="section-header" style="flex-direction: column; align-items:flex-start; gap:10px; margin-bottom: 20px;">
+             <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <h2 style="margin:0;">🏆 Standings</h2>
+                 <div class="btn-group">
+                    <button onclick="shareStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">📸 Insta Post</button>
+                    <button onclick="shareStandingsPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">📄 PDF</button>
+                </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap: 15px; flex-wrap:wrap; width:100%; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <div class="btn-group" style="display:flex;">
+                    <button class="btn ${gender === 'women' ? 'btn-primary' : 'btn-outline-primary'}" 
+                        style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
+                        onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
+                    <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
+                        style="border-top-left-radius: 0; border-bottom-left-radius: 0; border-left:none;"
+                        onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
+                </div>
+                
+                <div style="height: 30px; width: 1px; background: rgba(255,255,255,0.2);"></div>
+
+                <div class="race-tabs" style="margin-bottom:0; display:flex; flex-wrap:wrap; gap:5px;">
+                    ${distances.map(d => `
+                        <button class="race-tab ${dist === d ? 'active' : ''}" 
+                        style="padding: 6px 12px; font-size: 0.9em; ${dist === d ? 'background: #D4AF37; color: black; font-weight:bold;' : ''}"
+                        onclick="appState.viewStandingsDist='${d}'; renderCurrentTab()">${d.replace('_', ' ').toUpperCase()}</button>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+
+        </div>
+
+        <div class="card" id="ms-standings-card">
+            ${content}
         </div>
     `;
 }
 
-// Share MS Standings as Image (for Instagram - 1080x1350 format)
-function shareMsStandingsImage() {
+// Share Standings as Image (for Instagram - 1080x1350 format)
+function shareStandingsImage() {
+    // Detect Mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // Default Behavior (Desktop OR Mobile without native share): Generate Image for Download
     const gender = appState.viewGender;
-    const standings = calculateMassStartStandings(gender);
-    const filteredStandings = standings.filter(s => s.total > 0);
+    const dist = appState.viewStandingsDist || 'mass_start';
     const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
+    let title = dist === 'mass_start' ? "MASS START POINTS" : dist.toUpperCase();
 
-    // Limit to top 12
-    const displayAthletes = filteredStandings.slice(0, 12);
+    // Data Preparation
+    let dataRows = [];
+    if (dist === 'mass_start') {
+        const standings = calculateMassStartStandings(gender);
+        const filtered = standings.filter(s => s.total > 0).slice(0, 12);
+        dataRows = filtered.map((s, i) => ({
+            rank: i + 1,
+            name: s.name,
+            cols: [s.races[1] || '-', s.races[2] || '-', s.races[3] || '-', s.races[4] || '-'],
+            main: s.total
+        }));
+    } else if (dist === '500m') {
+        const results = appState.events[gender]['500m'].results || [];
+        const r1 = appState.events[gender]['500m'].races?.[1] || [];
+        const r2 = appState.events[gender]['500m'].races?.[2] || [];
+        const getT = (list, name) => { const f = list.find(x => x.name === name); return f && f.time ? f.time : '-'; };
+        dataRows = results.slice(0, 12).map((r, i) => ({
+            rank: r.rank,
+            name: r.name,
+            cols: [getT(r1, r.name), getT(r2, r.name)],
+            main: r.time
+        }));
+    } else {
+        const results = appState.events[gender][dist].results || [];
+        results.sort((a, b) => a.rank - b.rank);
+        dataRows = results.slice(0, 12).map((r, i) => ({
+            rank: r.rank,
+            name: r.name,
+            cols: ['', '', '', ''],
+            main: r.time
+        }));
+    }
 
-    // Create a container specifically for the image capture
+    // 1. Create a Masking Overlay (to hide the "flash" of the content)
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #000; z-index: 2147483647; 
+        display: flex; align-items: center; justify-content: center;
+        color: #D4AF37; font-family: sans-serif; font-size: 24px; font-weight: bold;
+        transition: opacity 0.3s;
+    `;
+    overlay.innerHTML = `<div>Generating High-Res Image... 📸</div>`;
+    document.body.appendChild(overlay);
+
+    // 2. Create Container for Capture
+    // Position at top-left for html2canvas compatibility (overlay hides it from user)
     const exportContainer = document.createElement('div');
     exportContainer.style.cssText = `
-        position: fixed; top: 0; left: 0;
-        width: 1080px; height: 1350px; /* Instagram Portrait 4:5 */
-        background: radial-gradient(circle at top, #1a1a2e, #000);
-        color: white; font-family: 'Segoe UI', sans-serif;
-        padding: 60px; box-sizing: border-box;
-        z-index: -1; display: flex; flex-direction: column;
+        position: fixed; left: 0; top: 0;
+        width: 1080px; height: 1350px;
+        background: linear-gradient(180deg, #0d1117 0%, #010409 50%, #0d1117 100%);
+        color: white; font-family: 'Segoe UI', system-ui, sans-serif;
+        padding: 50px; box-sizing: border-box;
+        display: flex; flex-direction: column;
+        z-index: 2000000000; 
+        overflow: hidden;
     `;
 
+    // Add decorative background elements as HTML (captured by html2canvas)
+    const bgDecorations = `
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden;">
+            <!-- Top glow -->
+            <div style="position: absolute; top: -200px; left: 50%; transform: translateX(-50%); width: 800px; height: 400px; background: radial-gradient(ellipse, rgba(212, 175, 55, 0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+            <!-- Bottom subtle glow -->
+            <div style="position: absolute; bottom: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(ellipse, rgba(212, 175, 55, 0.08) 0%, transparent 70%); border-radius: 50%;"></div>
+            <!-- Left edge accent -->
+            <div style="position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: linear-gradient(180deg, transparent 10%, #D4AF37 50%, transparent 90%);"></div>
+            <!-- Right edge accent -->
+            <div style="position: absolute; top: 0; right: 0; width: 3px; height: 100%; background: linear-gradient(180deg, transparent 10%, #D4AF37 50%, transparent 90%);"></div>
+        </div>
+    `;
+
+    // Dynamic Header HTML with correct styling
+    let tableHeaderHTML = '';
+    const thStyle = "padding: 10px; text-align: center; color: #888; font-weight: 400; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;";
+    const thLeftStyle = "padding: 10px 20px; text-align: left; color: #888; font-weight: 400; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;";
+
+    if (dist === 'mass_start') {
+        tableHeaderHTML = `
+            <th style="${thLeftStyle}">Rank</th>
+            <th style="${thLeftStyle}">Athlete</th>
+            <th style="${thStyle}">R1</th>
+            <th style="${thStyle}">R2</th>
+            <th style="${thStyle}">R3</th>
+            <th style="${thStyle}">R4</th>
+            <th style="${thStyle} color: #D4AF37; font-weight: bold;">Total</th>
+        `;
+    } else if (dist === '500m') {
+        tableHeaderHTML = `
+            <th style="${thLeftStyle}">Rank</th>
+            <th style="${thLeftStyle}">Athlete</th>
+            <th style="${thStyle}">R1</th>
+            <th style="${thStyle}">R2</th>
+            <th style="${thStyle} color: #D4AF37; font-weight: bold;">Best</th>
+        `;
+    } else {
+        tableHeaderHTML = `
+            <th style="${thLeftStyle}">Rank</th>
+            <th style="${thLeftStyle}">Athlete</th>
+            <th></th>
+            <th style="${thStyle} color: #D4AF37; font-weight: bold;">Time</th>
+        `;
+    }
+
+    // Single InnerHTML Assignment for Safety
     exportContainer.innerHTML = `
-        <div style="text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 15px; margin-bottom: 10px;">
-            <div style="font-size: 30px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">${getBranding('MASS_START_TITLE')}</div>
-            <h1 style="font-size: 70px; margin: 0 0 5px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>MASS START</h1>
-            <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
-                <div style="background: #D4AF37; color: #000; padding: 4px 15px; font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">Current Standings</div>
-                <div style="color: #D4AF37; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; border: 1px solid #D4AF37; padding: 3px 15px;">Top ${displayAthletes.length}</div>
+        ${bgDecorations}
+        <div style="text-align: center; padding-bottom: 30px; margin-bottom: 20px; position: relative; z-index: 1;">
+            <div style="font-size: 24px; letter-spacing: 2px; color: #888; font-weight: 300; text-transform: uppercase; margin-bottom: 10px;">Olympic Trials 2026</div>
+            <h1 style="font-size: 90px; margin: 0; color: #fff; text-transform: uppercase; line-height: 0.9; font-weight: 800; text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                <span style="display:block; font-size: 0.6em; margin-bottom: 5px; color: #D4AF37;">${genderLabel}</span>
+                ${title.replace('Standings', '').replace('Results', '') /* Clean up title overlap */}
+            </h1>
+            <div style="display: flex; justify-content: center; gap: 0; align-items: center; margin-top: 25px;">
+                <div style="background: #D4AF37; color: #000; padding: 8px 25px; font-weight: 800; font-size: 18px; text-transform: uppercase; letter-spacing: 1px;">Current Standings</div>
+                <div style="color: #D4AF37; font-size: 18px; font-weight: 400; text-transform: uppercase; border: 1px solid #D4AF37; padding: 7px 25px; letter-spacing: 1px;">Top ${dataRows.length}</div>
             </div>
+            <div style="width: 100%; height: 2px; background: #D4AF37; margin-top: 30px;"></div>
         </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-start;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0 5px;">
+        <div style="flex: 1; display: flex; flex-direction: column; position: relative; z-index: 1;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 5px; margin-top: 0;">
                 <thead>
-                    <tr style="font-size: 18px; color: #888; letter-spacing: 2px; text-transform: uppercase;">
-                        <th style="padding: 0 20px; text-align: left; font-weight: normal; width: 50px;">Rank</th>
-                        <th style="padding: 0 10px; text-align: left; font-weight: normal;">Athlete</th>
-                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R1</th>
-                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R2</th>
-                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R3</th>
-                        <th style="padding: 0 5px; text-align: center; font-weight: normal; width: 55px;">R4</th>
-                        <th style="padding: 0 25px 0 0; text-align: right; font-weight: normal; width: 80px; color: #D4AF37;">Total</th>
+                    <tr>
+                        ${tableHeaderHTML}
                     </tr>
                 </thead>
                 <tbody>
-                    ${displayAthletes.map((s, i) => `
-                        <tr style="background: rgba(255,255,255,0.05); font-size: 24px;">
-                            <td style="padding: 6px 20px; font-weight: 900; color: #D4AF37;">${i + 1}</td>
-                            <td style="padding: 6px 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[1] || '-'}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[2] || '-'}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[3] || '-'}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[4] || '-'}</td>
-                            <td style="padding: 6px 25px 6px 0; text-align: right; font-weight: bold; font-family: monospace; font-size: 30px;">
-                                ${s.total}
-                            </td>
+                    ${dataRows.map((s, i) => {
+        let innerCols = '';
+        // Column Generation logic
+        const tdStyle = "font-size: 24px; font-weight: bold; text-align: center; color: #fff; font-family: 'Segoe UI', monospace;";
+
+        if (dist === 'mass_start') {
+            innerCols = s.cols.map(c => `<td style="${tdStyle}">${c}</td>`).join('');
+        } else if (dist === '500m') {
+            innerCols = s.cols.map(c => `<td style="${tdStyle}">${c}</td>`).join('');
+        } else {
+            innerCols = `<td></td>`;
+        }
+
+        // Zebra styling
+        // Reference image shows alternating dark/slightly darker rows, all very dark.
+        let bgStyle = i % 2 === 0 ? "background: rgba(20, 20, 30, 0.9); border-left: 3px solid #D4AF37;" : "background: rgba(25, 25, 35, 0.85);";
+
+        let rankColor = "#D4AF37"; // Default Gold
+        if (s.rank === 1) { rankColor = "#FFD700"; } // Brighter Gold
+
+        return `
+                        <tr style="${bgStyle} height: 55px;">
+                            <td style="padding: 0 20px; font-size: 24px; font-weight: 900; color: ${rankColor}; vertical-align: middle;">${s.rank}</td>
+                            <td style="padding: 0 10px; font-size: 22px; font-weight: 700; text-transform: uppercase; vertical-align: middle; color: #fff; letter-spacing: 0.5px;">${s.name}</td>
+                            ${innerCols}
+                            <td style="padding: 0 20px 0 0; text-align: center; font-size: 30px; font-weight: 900; color: #fff; vertical-align: middle; letter-spacing: -1px;">${s.main}</td>
                         </tr>
-                    `).join('')}
+                        `;
+    }).join('')}
                 </tbody>
             </table>
         </div>
 
-        <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 18px; margin-top: 10px; font-style: italic; letter-spacing: 1px;">
-            * Official selection based on best 3 of 4 race results
-        </div>
-
-        <div style="text-align: center; margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-size: 36px; font-weight: 900; color: #D4AF37; letter-spacing: 1px;">@SALTYGOLDSUPPLY</div>
-            <div style="font-size: 18px; color: #888; margin-top: 5px; letter-spacing: 3px; font-weight: 300;">WWW.SALTYGOLDSUPPLY.COM</div>
+        <div style="text-align: center; margin-top: auto; padding-top: 30px; border-top: 2px solid rgba(212, 175, 55, 0.3); position: relative; z-index: 1;">
+            <div style="font-size: 16px; font-style: italic; color: #888; margin-bottom: 20px;">* Unofficial Standings based on best 3 of 4 race results</div>
+            <div style="font-size: 36px; font-weight: 900; color: #D4AF37; letter-spacing: 2px; text-shadow: 0 2px 20px rgba(212, 175, 55, 0.4);">@SALTYGOLDSUPPLY</div>
+            <div style="font-size: 14px; color: #888; margin-top: 8px; text-transform: uppercase; letter-spacing: 4px;">WWW.SALTYGOLDSUPPLY.COM</div>
         </div>
     `;
 
     document.body.appendChild(exportContainer);
-    showToast('Generating high-res graphic... 🎨');
 
-    html2canvas(exportContainer, {
-        scale: 1,
-        useCORS: true,
-        backgroundColor: '#000'
-    }).then(canvas => {
-        document.body.removeChild(exportContainer);
-        canvas.toBlob(blob => {
-            const fileName = `OT2026_MS_Standings_${genderLabel}.png`;
-            const file = new File([blob], fileName, { type: 'image/png' });
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // 4. Capture with dom-to-image (Visible "Flash" Method)
+    // We show the card ON TOP of everything for a moment. This guarantees the browser renders it.
 
-            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({
-                    files: [file],
-                    title: 'Mass Start Standings 🏆',
-                    text: `Latest ${genderLabel} Mass Start standings! #OlympicTrials2026`
-                })
-                    .then(() => showToast('Shared successfully! 🚀'))
-                    .catch((error) => {
-                        console.log('Error sharing:', error);
-                        saveAsFile(blob, fileName);
+    // Safety Valve
+    const safetyTimer = setTimeout(() => {
+        if (document.body.contains(exportContainer)) {
+            document.body.removeChild(exportContainer);
+        }
+        if (document.body.contains(overlay)) {
+            document.body.removeChild(overlay);
+        }
+        alert("Image generation timed out. Please try again.");
+    }, 8000);
+
+    // Give browser 100ms to paint the new DOM elements before capturing
+    setTimeout(() => {
+        // Use html2canvas - backgroundColor null to capture the gradient
+        html2canvas(exportContainer, {
+            scale: 1,
+            backgroundColor: null,  // Capture the gradient from container
+            useCORS: true
+        }).then(canvas => {
+            clearTimeout(safetyTimer);
+
+            // Remove the card and overlay
+            document.body.removeChild(exportContainer);
+            document.body.removeChild(overlay);
+
+            const filename = `Results_${gender}_${dist}.jpg`;  // Use JPG like working function
+
+            // Use toBlob with JPEG format and quality (matching working downloadShareCard)
+            canvas.toBlob(blob => {
+                if (!blob) {
+                    alert("Image generation failed (empty data).");
+                    return;
+                }
+
+                const file = new File([blob], filename, { type: 'image/jpeg' });
+
+                if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        files: [file],
+                        title: '2026 Olympic Trials Standings',
+                        text: `Check out the ${genderLabel} standings!`
+                    }).catch(() => {
+                        saveAsFile(blob, filename);
                     });
-            } else {
-                saveAsFile(blob, fileName);
-            }
+                } else {
+                    saveAsFile(blob, filename);
+                }
+            }, 'image/jpeg', 0.95);  // JPEG with quality like working function
+        }).catch(function (error) {
+            clearTimeout(safetyTimer);
+            console.error('Image generation failed:', error);
+            if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
+            if (document.body.contains(overlay)) document.body.removeChild(overlay);
+            alert("Image generation failed.");
         });
-    }).catch(err => {
-        console.error(err);
-        showToast('Error generating image');
-        if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
-    });
+    }, 100);
 }
 
-// Share MS Standings as PDF
-function shareMsStandingsPdf() {
+
+// Share Standings as PDF
+function shareStandingsPdf() {
     const gender = appState.viewGender;
-    const standings = calculateMassStartStandings(gender);
-    const filteredStandings = standings.filter(s => s.total > 0);
-    const genderLabel = gender === 'women' ? "Women's" : "Men's";
+    const dist = appState.viewStandingsDist || 'mass_start';
+    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
+    let title = dist === 'mass_start' ? "MASS START" : `${dist.toUpperCase()}`;
+
+    // Data prep
+    let headers = [];
+    let dataRows = [];
+
+    if (dist === 'mass_start') {
+        const standings = calculateMassStartStandings(gender);
+        const filtered = standings.filter(s => s.total > 0);
+        headers = ['RANK', 'ATHLETE', 'R1', 'R2', 'R3', 'R4', 'TOTAL'];
+        dataRows = filtered.map((s, i) => ({
+            rank: i + 1,
+            name: s.name.toUpperCase(),
+            cols: [s.races[1] || '-', s.races[2] || '-', s.races[3] || '-', s.races[4] || '-'],
+            main: s.total
+        }));
+    } else if (dist === '500m') {
+        const results = appState.events[gender][dist].results || [];
+        results.sort((a, b) => a.rank - b.rank);
+
+        const getT = (r, name) => {
+            const list = appState.events[gender][r].results || [];
+            const f = list.find(x => x.name === name);
+            return f && f.time ? f.time : '-';
+        };
+        const r1 = gender === 'women' ? '500m_1_w' : '500m_1_m';
+        const r2 = gender === 'women' ? '500m_2_w' : '500m_2_m';
+
+        headers = ['RANK', 'ATHLETE', 'RACE 1', 'RACE 2', 'BEST'];
+        dataRows = results.map((r, i) => ({
+            rank: r.rank,
+            name: r.name.toUpperCase(),
+            cols: [getT(r1, r.name), getT(r2, r.name)],
+            main: r.time
+        }));
+    } else {
+        const results = appState.events[gender][dist].results || [];
+        results.sort((a, b) => a.rank - b.rank);
+
+        headers = ['RANK', 'ATHLETE', 'TIME'];
+        dataRows = results.map((r, i) => ({
+            rank: r.rank,
+            name: r.name.toUpperCase(),
+            cols: [],
+            main: r.time
+        }));
+    }
 
     // Dynamic sizing for PDF based on athlete count
-    const athleteCount = filteredStandings.length;
+    const athleteCount = dataRows.length;
     const pdfPadding = athleteCount <= 12 ? 12 : athleteCount <= 16 ? 10 : 8;
     const pdfFontSize = athleteCount <= 12 ? 14 : athleteCount <= 16 ? 12 : 10;
 
-    // Create printable HTML with Instagram-style design
+    // Header HTML Generator
+    const headerHtml = headers.map(h => `<th>${h}</th>`).join('');
+
+    // Create printable HTML with Matching Salty Gold Design (Light Mode for Printer Compatibility)
     const printHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>${genderLabel} Mass Start Standings</title>
-            <style>
-                @page { margin: 0.5in; }
-                body { 
-                    font-family: Arial, sans-serif; 
-                    padding: 40px;
-                    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-                    color: white;
-                    min-height: 100vh;
-                    margin: 0;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                    color-adjust: exact !important;
-                }
-                .header { text-align: center; margin-bottom: 30px; }
-                .header-top { font-size: 18px; color: #D4AF37; margin-bottom: 10px; }
-                .header-title { font-size: 36px; font-weight: bold; color: #fff; margin-bottom: 10px; }
-                .header-subtitle { font-size: 24px; color: #D4AF37; }
-                .subtitle { text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 25px; font-size: 14px; }
-                table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    background: rgba(255,255,255,0.1);
-                    border-radius: 10px;
-                    overflow: hidden;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                }
-                th { 
-                    background: rgba(212,175,55,0.3); 
-                    color: #D4AF37; 
-                    padding: ${pdfPadding}px;
-                    font-size: ${pdfFontSize}px;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                }
-                td { 
-                    padding: ${pdfPadding}px; 
-                    text-align: center;
-                    border-bottom: 1px solid rgba(255,255,255,0.1);
-                    font-size: ${pdfFontSize}px;
-                }
-                .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500) !important; color: #000; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0) !important; color: #000; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513) !important; color: #fff; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .name { text-align: left; font-weight: bold; }
-                .total { font-weight: bold; color: #D4AF37; font-size: 16px; }
-                .footer { 
-                    text-align: center; 
-                    margin-top: 30px; 
-                    padding-top: 20px;
-                    border-top: 1px solid rgba(255,255,255,0.1);
-                }
-                .footer-note { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
-                .footer-brand { font-size: 14px; color: #D4AF37; }
-                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <div class="header-top">★ ${getBranding('EVENT_NAME').toUpperCase()} ★</div>
-                <div class="header-title">🏆 Mass Start Standings</div>
-                <div class="header-subtitle">${genderLabel} Overall Points</div>
+            <!DOCTYPE html>
+                <html>
+                    <head>
+                        <title>${genderLabel} ${title}</title>
+                        <style>
+                            @page { margin: 0.5in; }
+                            body {
+                                font-family: 'Segoe UI', Arial, sans-serif;
+                                padding: 40px;
+                                background: white; 
+                                color: #1a1a2e; /* Dark Blue Text */
+                                min-height: 100vh;
+                                margin: 0;
+                            }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 4px solid #D4AF37; padding-bottom: 20px; }
+                            .header-top { font-size: 14px; letter-spacing: 3px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+                            .header-title { font-size: 48px; font-weight: 800; color: #1a1a2e; margin: 0; line-height: 1; }
+                            .header-sub { font-size: 24px; font-weight: 300; color: #D4AF37; margin-bottom: 0; }
+                            
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-top: 20px;
+                            }
+                            th {
+                                color: #666;
+                                padding: ${pdfPadding}px;
+                                font-size: 12px;
+                                text-transform: uppercase;
+                                letter-spacing: 1px;
+                                border-bottom: 2px solid #D4AF37;
+                                text-align: center;
+                            }
+                            td {
+                                padding: ${pdfPadding}px;
+                                text-align: center;
+                                border-bottom: 1px solid #eee;
+                                font-size: ${pdfFontSize}px;
+                                font-weight: bold;
+                                color: #000;
+                            }
+                            td:nth-child(2) {
+                                text-align: left;
+                                padding-left: 20px; 
+                            }
+                            tr:nth-child(even) { background: #f9f9f9; }
+                            
+                            .rank-1 { color: #d6a400 !important; font-weight: 900; }
+                            .rank-2 { color: #999 !important; font-weight: 900; }
+                            .rank-3 { color: #b06d28 !important; font-weight: 900; }
+                            
+                            .footer {
+                                text-align: center;
+                                margin-top: 40px;
+                                padding-top: 20px;
+                                border-top: 1px solid #ddd;
+                            }
+                            .footer-note { font-size: 12px; font-style: italic; color: #666; margin-bottom: 10px; }
+                            .footer-brand { font-size: 20px; color: #D4AF37; font-weight: bold; letter-spacing: 1px; }
+                            .footer-url { font-size: 10px; color: #666; letter-spacing: 2px; text-transform: uppercase; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <div class="header-top">Olympic Trials 2026</div>
+                            <div class="header-sub">${genderLabel}</div>
+                            <div class="header-title">${title}</div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>${headerHtml}</tr>
+                            </thead>
+                            <tbody>
+                                ${dataRows.map((s, i) => {
+        let innerCols = s.cols.map(c => `<td>${c}</td>`).join('');
+        let rankClass = '';
+        if (s.rank === 1) rankClass = 'rank-1';
+        if (s.rank === 2) rankClass = 'rank-2';
+        if (s.rank === 3) rankClass = 'rank-3';
+
+        return `
+        <tr>
+            <td class="${rankClass}" style="font-size: 1.2em;">${s.rank}</td>
+            <td>${s.name}</td>
+            ${innerCols}
+            <td style="color: #1a1a2e; font-size: 1.2em;">${s.main}</td>
+        </tr>
+        `;
+    }).join('')}
+                            </tbody>
+                        </table>
+
+                        <div class="footer">
+                             <div class="footer-note">* Unofficial Standings</div>
+                            <div class="footer-brand">@SALTYGOLDSUPPLY</div>
+                            <div class="footer-url">WWW.SALTYGOLDSUPPLY.COM</div>
+                        </div>
+                    </body>
+                </html>
+    `;
+
+    // Create hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:absolute; left:-9999px; width:0; height:0;';
+    document.body.appendChild(iframe);
+
+    iframe.contentDocument.write(printHtml);
+    iframe.contentDocument.close();
+
+    // Use timeout instead of onload for hidden iframes (more reliable)
+    setTimeout(() => {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            console.error('Print failed:', e);
+            // Fallback: open in new window
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printHtml);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 500);
+    }, 250);
+
+    showToast('PDF ready to print/save 📄');
+}
+
+// =============================================================================
+// OLYMPIC TEAM EXPORTS
+// =============================================================================
+
+// Share Olympic Team as Image (for Instagram - 1080x1350 format)
+function shareOlympicTeamImage() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const gender = appState.viewGender;
+    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
+
+    // Get team data
+    const { roster: fullRoster, teamCap } = calculateReduction(gender);
+    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Specialist');
+    const roster = fullRoster.filter(a => isRealAthlete(a.name)).slice(0, teamCap);
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #000; z-index: 2147483647; 
+        display: flex; align-items: center; justify-content: center;
+        color: #D4AF37; font-family: sans-serif; font-size: 24px; font-weight: bold;
+    `;
+    overlay.innerHTML = `<div>Generating High-Res Image... 📸</div>`;
+    document.body.appendChild(overlay);
+
+    // Create export container - positioned at top-left for html2canvas
+    const exportContainer = document.createElement('div');
+    exportContainer.style.cssText = `
+        position: fixed; left: 0; top: 0;
+        width: 1080px; height: 1350px;
+        background: linear-gradient(180deg, #0d1117 0%, #010409 50%, #0d1117 100%);
+        color: white; font-family: 'Segoe UI', system-ui, sans-serif;
+        padding: 50px; box-sizing: border-box;
+        display: flex; flex-direction: column;
+        z-index: 2000000000; 
+        overflow: hidden;
+    `;
+
+    // Background decorations
+    const bgDecorations = `
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden;">
+            <div style="position: absolute; top: -200px; left: 50%; transform: translateX(-50%); width: 800px; height: 400px; background: radial-gradient(ellipse, rgba(212, 175, 55, 0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(ellipse, rgba(212, 175, 55, 0.08) 0%, transparent 70%); border-radius: 50%;"></div>
+            <div style="position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: linear-gradient(180deg, transparent 10%, #D4AF37 50%, transparent 90%);"></div>
+            <div style="position: absolute; top: 0; right: 0; width: 3px; height: 100%; background: linear-gradient(180deg, transparent 10%, #D4AF37 50%, transparent 90%);"></div>
+        </div>
+    `;
+
+    // Build athlete rows
+    const athleteRows = roster.map((t, i) => {
+        let statusIcon = t.reductionRank === 0 ? '🔒' : '✅';
+        let bgStyle = i % 2 === 0 ? "background: rgba(20, 20, 30, 0.9); border-left: 3px solid #D4AF37;" : "background: rgba(25, 25, 35, 0.85);";
+
+        return `
+            <tr style="${bgStyle} height: 55px;">
+                <td style="padding: 0 20px; font-size: 24px; font-weight: 900; color: #D4AF37; vertical-align: middle;">${i + 1}</td>
+                <td style="padding: 0 10px; font-size: 22px; font-weight: 700; text-transform: uppercase; vertical-align: middle; color: #fff;">${t.name}</td>
+                <td style="padding: 0 10px; font-size: 16px; color: #888; vertical-align: middle;">${t.events.join(', ')}</td>
+                <td style="padding: 0 20px; text-align: center; font-size: 20px; vertical-align: middle;">${statusIcon}</td>
+            </tr>
+        `;
+    }).join('');
+
+    exportContainer.innerHTML = `
+        ${bgDecorations}
+        <div style="text-align: center; padding-bottom: 30px; margin-bottom: 20px; position: relative; z-index: 1;">
+            <div style="font-size: 24px; letter-spacing: 2px; color: #888; font-weight: 300; text-transform: uppercase; margin-bottom: 10px;">Olympic Trials 2026</div>
+            <h1 style="font-size: 70px; margin: 0; color: #fff; text-transform: uppercase; line-height: 0.9; font-weight: 800; text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                <span style="display:block; font-size: 0.5em; margin-bottom: 5px; color: #D4AF37;">${genderLabel}</span>
+                OLYMPIC TEAM
+            </h1>
+            <div style="display: flex; justify-content: center; gap: 0; align-items: center; margin-top: 25px;">
+                <div style="background: #D4AF37; color: #000; padding: 8px 25px; font-weight: 800; font-size: 18px; text-transform: uppercase; letter-spacing: 1px;">Predicted Roster</div>
+                <div style="color: #D4AF37; font-size: 18px; font-weight: 400; text-transform: uppercase; border: 1px solid #D4AF37; padding: 7px 25px; letter-spacing: 1px;">${roster.length} / ${teamCap}</div>
             </div>
-            <p class="subtitle">Accumulated points from Races 1-4 (Best 3 of 4 for official selection)</p>
-            <table>
+            <div style="width: 100%; height: 2px; background: #D4AF37; margin-top: 30px;"></div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 1;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 5px;">
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th style="text-align:left;">Athlete</th>
-                        <th>R1</th>
-                        <th>R2</th>
-                        <th>R3</th>
-                        <th>R4</th>
-                        <th>Total</th>
+                        <th style="padding: 10px 20px; text-align: left; color: #888; font-size: 14px; letter-spacing: 1px;">#</th>
+                        <th style="padding: 10px; text-align: left; color: #888; font-size: 14px; letter-spacing: 1px;">ATHLETE</th>
+                        <th style="padding: 10px; text-align: left; color: #888; font-size: 14px; letter-spacing: 1px;">EVENTS</th>
+                        <th style="padding: 10px 20px; text-align: center; color: #888; font-size: 14px;">STATUS</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${filteredStandings.map((s, i) => {
-        const rank = i + 1;
-        let rankClass = '';
-        let medalEmoji = '';
-        if (rank === 1) { rankClass = 'rank-1'; medalEmoji = '🥇'; }
-        if (rank === 2) { rankClass = 'rank-2'; medalEmoji = '🥈'; }
-        if (rank === 3) { rankClass = 'rank-3'; medalEmoji = '🥉'; }
-        return `
-                    <tr>
-                        <td class="${rankClass}">${medalEmoji}${rank}</td>
-                        <td class="name">${s.name}</td>
-                        <td>${s.races[1] || '-'}</td>
-                        <td>${s.races[2] || '-'}</td>
-                        <td>${s.races[3] || '-'}</td>
-                        <td>${s.races[4] || '-'}</td>
-                        <td class="total">${s.total}</td>
-                    </tr>`;
-    }).join('')}
+                    ${athleteRows}
                 </tbody>
             </table>
-            <div class="footer">
-                <div class="footer-note">Generated on ${new Date().toLocaleDateString()} | Unofficial Results</div>
-                <div class="footer-brand">Powered by <a href="https://saltygoldsupply.com" style="color: #D4AF37; text-decoration: underline;">saltygoldsupply.com</a></div>
-            </div>
-        </body>
+        </div>
+
+        <div style="text-align: center; margin-top: auto; padding-top: 30px; border-top: 2px solid rgba(212, 175, 55, 0.3); position: relative; z-index: 1;">
+            <div style="font-size: 16px; font-style: italic; color: #888; margin-bottom: 20px;">* Unofficial Predicted Team based on current results</div>
+            <div style="font-size: 36px; font-weight: 900; color: #D4AF37; letter-spacing: 2px; text-shadow: 0 2px 20px rgba(212, 175, 55, 0.4);">@SALTYGOLDSUPPLY</div>
+            <div style="font-size: 14px; color: #888; margin-top: 8px; text-transform: uppercase; letter-spacing: 4px;">WWW.SALTYGOLDSUPPLY.COM</div>
+        </div>
+    `;
+
+    document.body.appendChild(exportContainer);
+
+    // Safety timer
+    const safetyTimer = setTimeout(() => {
+        if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
+        if (document.body.contains(overlay)) document.body.removeChild(overlay);
+        alert("Image generation timed out. Please try again.");
+    }, 8000);
+
+    // Capture with html2canvas - backgroundColor null to capture gradient
+    setTimeout(() => {
+        html2canvas(exportContainer, {
+            scale: 1,
+            backgroundColor: null,  // Capture the gradient from container
+            useCORS: true
+        }).then(canvas => {
+            clearTimeout(safetyTimer);
+            document.body.removeChild(exportContainer);
+            document.body.removeChild(overlay);
+
+            const filename = `Olympic_Team_${gender}.jpg`;  // JPEG like working function
+
+            canvas.toBlob(blob => {
+                if (!blob) {
+                    alert("Image generation failed (empty data).");
+                    return;
+                }
+
+                const file = new File([blob], filename, { type: 'image/jpeg' });
+
+                if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        files: [file],
+                        title: '2026 Olympic Team Prediction',
+                        text: `Check out the ${genderLabel} Olympic Team!`
+                    }).catch(() => {
+                        saveAsFile(blob, filename);
+                    });
+                } else {
+                    saveAsFile(blob, filename);
+                }
+            }, 'image/jpeg', 0.95);  // JPEG with quality
+        }).catch(function (error) {
+            clearTimeout(safetyTimer);
+            console.error('Image generation failed:', error);
+            if (document.body.contains(exportContainer)) document.body.removeChild(exportContainer);
+            if (document.body.contains(overlay)) document.body.removeChild(overlay);
+            alert("Image generation failed.");
+        });
+    }, 100);
+}
+
+// Share Olympic Team as PDF
+function shareOlympicTeamPdf() {
+    const gender = appState.viewGender;
+    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
+
+    // Get team data
+    const { roster: fullRoster, teamCap } = calculateReduction(gender);
+    const isRealAthlete = (name) => !name.startsWith('Team Pursuit Specialist');
+    const roster = fullRoster.filter(a => isRealAthlete(a.name)).slice(0, teamCap);
+
+    const printHtml = `
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>${genderLabel} Olympic Team</title>
+                <style>
+                    @page { margin: 0.5in; }
+                    body {
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        padding: 40px;
+                        background: white; 
+                        color: #1a1a2e;
+                        min-height: 100vh;
+                        margin: 0;
+                    }
+                    .header { text-align: center; margin-bottom: 30px; border-bottom: 4px solid #D4AF37; padding-bottom: 20px; }
+                    .header-top { font-size: 14px; letter-spacing: 3px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+                    .header-title { font-size: 48px; font-weight: 800; color: #1a1a2e; margin: 0; line-height: 1; }
+                    .header-sub { font-size: 24px; font-weight: 300; color: #D4AF37; margin-bottom: 0; }
+                    
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th {
+                        color: #666;
+                        padding: 12px;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        border-bottom: 2px solid #D4AF37;
+                        text-align: left;
+                    }
+                    td {
+                        padding: 12px;
+                        border-bottom: 1px solid #eee;
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: #000;
+                    }
+                    tr:nth-child(even) { background: #f9f9f9; }
+                    
+                    .footer {
+                        text-align: center;
+                        margin-top: 40px;
+                        padding-top: 20px;
+                        border-top: 1px solid #ddd;
+                    }
+                    .footer-note { font-size: 12px; font-style: italic; color: #666; margin-bottom: 10px; }
+                    .footer-brand { font-size: 20px; color: #D4AF37; font-weight: bold; letter-spacing: 1px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="header-top">Olympic Trials 2026</div>
+                    <div class="header-sub">${genderLabel}</div>
+                    <div class="header-title">OLYMPIC TEAM</div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Athlete</th>
+                            <th>Qualifying Events</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${roster.map((t, i) => `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${t.name.toUpperCase()}</td>
+                                <td>${t.events.join(', ')}</td>
+                                <td>${t.reductionRank === 0 ? '🔒 Protected' : '✅ On Team'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div class="footer">
+                    <div class="footer-note">* Unofficial Predicted Team (${roster.length} / ${teamCap})</div>
+                    <div class="footer-brand">@SALTYGOLDSUPPLY</div>
+                </div>
+            </body>
         </html>
     `;
 
-    // Open print dialog
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printHtml);
-    printWindow.document.close();
-    printWindow.focus();
+    // Create hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:absolute; left:-9999px; width:0; height:0;';
+    document.body.appendChild(iframe);
+
+    iframe.contentDocument.write(printHtml);
+    iframe.contentDocument.close();
+
     setTimeout(() => {
-        printWindow.print();
-    }, 500);
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printHtml);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 500);
+    }, 250);
 
     showToast('PDF ready to print/save 📄');
 }
@@ -1617,10 +2624,10 @@ function showSkatersToWatch(gender, dist) {
 
     let content = '';
     if (data.note) {
-        content = `<p style="text-align: center; color: #D4AF37; font-style: italic; padding: 20px;">${data.note}</p>`;
+        content = `< p style = "text-align: center; color: #D4AF37; font-style: italic; padding: 20px;" > ${data.note}</p > `;
     } else {
         content = `
-            <table class="data-table" style="width:100%;">
+            < table class="data-table" style = "width:100%;" >
                 <thead>
                     <tr>
                         <th style="width:40px;">#</th>
@@ -1641,7 +2648,7 @@ function showSkatersToWatch(gender, dist) {
                         </tr>
                     `).join('')}
                 </tbody>
-            </table>
+            </table >
             <p style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
                 Season Bests 2025-26 | Source: speedskatingresults.com
             </p>
@@ -1653,13 +2660,13 @@ function showSkatersToWatch(gender, dist) {
     modal.id = 'skaters-modal';
     modal.style.cssText = `
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.8); z-index: 10000;
-        display: flex; align-items: center; justify-content: center;
-    `;
+        background: rgba(0, 0, 0, 0.8); z - index: 10000;
+        display: flex; align - items: center; justify - content: center;
+        `;
 
     // Add Download Button to header
     modal.innerHTML = `
-        <div style="background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            < div style = "background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);" >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h3 style="margin: 0; color: #D4AF37; font-size: 1.1rem;">👀 ${genderLabel} ${distLabel}</h3>
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -1701,8 +2708,8 @@ function showSkatersToWatch(gender, dist) {
             <p style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
                 Season Bests 2025-26 | Source: speedskatingresults.com
             </p>
-        </div>
-    `;
+        </div >
+            `;
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     document.body.appendChild(modal);
 }
@@ -1719,21 +2726,21 @@ function downloadSkatersImage(gender, dist) {
     exportContainer.style.cssText = `
         position: fixed; top: 0; left: 0;
         width: 1080px; height: 1350px; /* Instagram Portrait 4:5 */
-        background: radial-gradient(circle at top, #1a1a2e, #000);
-        color: white; font-family: 'Segoe UI', sans-serif;
-        padding: 60px; box-sizing: border-box;
-        z-index: -1; display: flex; flex-direction: column;
-    `;
+        background: radial - gradient(circle at top, #1a1a2e, #000);
+        color: white; font - family: 'Segoe UI', sans - serif;
+        padding: 60px; box - sizing: border - box;
+        z - index: -1; display: flex; flex - direction: column;
+        `;
 
     exportContainer.innerHTML = `
-        <div style="text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 25px; margin-bottom: 30px;">
+            < div style = "text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 25px; margin-bottom: 30px;" >
             <div style="font-size: 32px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">${getBranding('MASS_START_TITLE')}</div>
             <h1 style="font-size: 90px; margin: 5px 0 10px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>${distLabel}</h1>
             <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
                 <div style="background: #D4AF37; color: #000; padding: 5px 20px; font-weight: bold; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;">Skaters to Watch</div>
                 <div style="color: #D4AF37; font-size: 22px; text-transform: uppercase; letter-spacing: 2px; border: 1px solid #D4AF37; padding: 4px 20px;">Season Bests</div>
             </div>
-        </div>
+        </div >
 
         <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
             <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
@@ -1754,7 +2761,7 @@ function downloadSkatersImage(gender, dist) {
             <div style="font-size: 42px; font-weight: 900; color: #D4AF37; letter-spacing: 1px;">@SALTYGOLDSUPPLY</div>
             <div style="font-size: 20px; color: #888; margin-top: 5px; letter-spacing: 3px; font-weight: 300;">WWW.SALTYGOLDSUPPLY.COM</div>
         </div>
-    `;
+        `;
 
     document.body.appendChild(exportContainer);
     showToast('Generating high-res graphic... 🎨');
@@ -1800,10 +2807,100 @@ function downloadSkatersImage(gender, dist) {
 }
 
 function saveAsFile(blob, fileName) {
+    // Strategy 1: File System Access API (opens native "Save As" dialog - bypasses extensions!)
+    if ('showSaveFilePicker' in window) {
+        const extension = fileName.split('.').pop().toLowerCase();
+        const mimeType = extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : 'image/png';
+
+        window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+                description: 'Image file',
+                accept: { [mimeType]: [`.${extension}`] }
+            }]
+        }).then(handle => {
+            return handle.createWritable();
+        }).then(writable => {
+            writable.write(blob);
+            return writable.close();
+        }).then(() => {
+            showToast('Image saved! 📸');
+        }).catch(err => {
+            // User cancelled the dialog or error occurred
+            if (err.name !== 'AbortError') {
+                console.log('File System API failed, falling back:', err);
+                saveAsFileFallback(blob, fileName);
+            }
+        });
+        return;
+    }
+
+    // Fallback for browsers without File System Access API
+    saveAsFileFallback(blob, fileName);
+}
+
+function saveAsFileFallback(blob, fileName) {
+    // Use FileSaver.js if available
+    if (typeof saveAs !== 'undefined') {
+        saveAs(blob, fileName);
+        showToast('Image downloaded! 📸');
+        return;
+    }
+
+    // IE10+ implementation
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveOrOpenBlob(blob, fileName);
+        showToast('Image downloaded! 📸');
+        return;
+    }
+
+    // Fallback: link-click method
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = fileName;
+    document.body.appendChild(link);
     link.click();
+
+    setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    }, 100);
+
+    showToast('Image downloaded! 📸');
+}
+
+// Helper to download from data URL (used by shareStandingsImage)
+// Uses FileSaver.js for reliable filename handling across all browsers
+function downloadDataUrl(dataUrl, fileName) {
+    // Convert base64 data URL to blob
+    const byteString = atob(dataUrl.split(',')[1]);
+    const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    const blob = new Blob([ab], { type: mimeType });
+
+    // Use FileSaver.js saveAs function (if available)
+    if (typeof saveAs !== 'undefined') {
+        saveAs(blob, fileName);
+        showToast('Image downloaded! 📸');
+        return;
+    }
+
+    // Fallback: use standard link click method
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 250);
     showToast('Image downloaded! 📸');
 }
 
@@ -1889,7 +2986,7 @@ function downloadShareCard() {
                 navigator.share({
                     files: [file],
                     title: `${getBranding('TEAM_NAME')} Qualifier 🇺🇸`,
-                    text: `Officially Qualified! ${getBranding('HASHTAG')}`
+                    text: `Officially Qualified! ${getBranding('HASHTAG')} `
                 })
                     .then(() => {
                         btn.innerText = 'Shared! 🚀';
@@ -1972,7 +3069,7 @@ function showToast(message) {
         padding: 12px 24px;
         border-radius: 8px;
         margin-top: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(5px);
         font-weight: 500;
         transform: translateX(100%);

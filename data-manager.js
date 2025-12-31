@@ -8,12 +8,13 @@ const DataManager = {
         // TODO: Replace with your actual Firebase project configuration
         // You can get this from the Firebase Console -> Project Settings -> General -> Your Apps
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY_HERE",
-            authDomain: "your-project-id.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
+            apiKey: "AIzaSyAUD4uKaUAPaSs058QW6K_6j8GedRh6o5U",
+            authDomain: "tracker-5bf0d.firebaseapp.com",
+            projectId: "tracker-5bf0d",
+            storageBucket: "tracker-5bf0d.firebasestorage.app",
+            messagingSenderId: "123353657558",
+            appId: "1:123353657558:web:09f8925933153c0e53d977",
+            measurementId: "G-ZYE07EGG5B"
         };
 
         // Initialize Firebase if config is set (checking one key as a proxy)
