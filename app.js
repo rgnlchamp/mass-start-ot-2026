@@ -632,10 +632,16 @@ function renderEventEntry() {
     const config = OLYMPIC_CONFIG[gender][dist];
 
     let content = `
-        <div class="section-header" style="border-bottom: 2px solid #D4AF37; margin-bottom: 30px; padding-bottom: 10px;">
-            <h2 style="color: #fff; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 800;">
-                <span style="color: #D4AF37;">${gender === 'women' ? "WOMEN'S" : "MEN'S"}</span> EVENT ENTRY
-            </h2>
+        <div class="section-header" style="border-bottom: 2px solid #D4AF37; margin-bottom: 30px; padding-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h2 style="color: #fff; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);">
+                    <span style="color: #D4AF37;">${gender === 'women' ? "WOMEN'S" : "MEN'S"}</span> ENTRY
+                </h2>
+                <div style="font-size: 0.9em; color: #888; margin-top: 5px;">${dist} // OFFICIAL DATA ENTRY</div>
+            </div>
+            <div style="background: rgba(212, 175, 55, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(212, 175, 55, 0.3); color: #D4AF37; font-size: 0.8em; font-weight: bold;">
+                ADMIN DATA LAYER
+            </div>
         </div>
         ${renderEventSelectors()}
         <div style="height: 30px;"></div>
@@ -643,29 +649,37 @@ function renderEventEntry() {
 
     // Premium Theme Styles
     const cardStyle = `
-        background: rgba(13, 17, 23, 0.9); 
-        border: 1px solid rgba(212, 175, 55, 0.2); 
-        border-radius: 12px; 
+        background: rgba(13, 17, 23, 0.6); 
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        border-radius: 16px; 
         padding: 30px; 
-        box-shadow: 0 0 20px rgba(0,0,0,0.5); 
-        backdrop-filter: blur(10px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.6); 
+        backdrop-filter: blur(20px);
         margin-bottom: 30px;
     `;
+
+    // Modern "Glass" Input Style
     const inputStyle = `
-        background: rgba(255, 255, 255, 0.05); 
-        border: 1px solid rgba(255, 255, 255, 0.1); 
+        background: rgba(0, 0, 0, 0.4); 
+        border: 1px solid rgba(255, 255, 255, 0.15); 
         color: #fff; 
-        padding: 12px 15px; 
-        border-radius: 6px; 
-        font-family: inherit;
-        transition: border-color 0.2s;
+        padding: 14px 18px; 
+        border-radius: 8px; 
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        outline: none;
     `;
+
+    // Focus state handling usually done in CSS, but inline style approach:
+    const focusStyle = `border-color: #D4AF37; box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);`;
+
     const labelStyle = `
-        font-size: 0.85em; 
+        font-size: 0.75em; 
         text-transform: uppercase; 
         letter-spacing: 1.5px; 
-        color: #D4AF37; 
-        margin-bottom: 10px; 
+        color: #8b949e; 
+        margin-bottom: 12px; 
         font-weight: 700;
         display: block;
     `;
@@ -676,9 +690,10 @@ function renderEventEntry() {
                 <h3 style="margin:0 0 5px 0; color: #fff;">Mass Start Manager</h3>
                 <p style="margin:0; color: #888; font-style: italic;">Detailed Points System Active</p>
             </div>
-            <div class="race-tabs mb-2 mt-2" style="justify-content: center;">
+            <div class="race-tabs mb-2 mt-2" style="justify-content: center; gap: 10px;">
                 ${[1, 2, 3, 4].map(r => `
                     <button class="race-tab ${appState.selectedMsRace === r ? 'active' : ''}" 
+                    style="flex: 0 1 auto; padding: 10px 25px;"
                     onclick="appState.selectedMsRace=${r}; renderCurrentTab()">RACE ${r}</button>
                 `).join('')}
             </div>
@@ -701,77 +716,92 @@ function renderEventEntry() {
 
         content += `
              <div style="${cardStyle}">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div>
-                        <div style="${labelStyle}">Active Event</div>
-                        <h2 style="margin: 0; color: #fff; font-size: 2em; font-weight: 800; text-transform: uppercase;">
-                            ${dist} <span style="color: #666; font-size: 0.6em; vertical-align: middle;">// RACE ${race}</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <span style="font-size: 0.9em; color: #D4AF37; font-weight: bold; letter-spacing: 1px;">ACTIVE EVENT</span>
+                        <h2 style="margin: 0; color: #fff; font-size: 2.2em; font-weight: 800; letter-spacing: -0.5px;">
+                            ${dist} / <span style="color: #888;">RACE ${race}</span>
                         </h2>
                     </div>
-                    <div class="race-tabs" style="margin: 0;">
-                        <button class="race-tab ${race === 1 ? 'active' : ''}" onclick="appState.selected500mRace=1; renderCurrentTab()">RACE 1</button>
-                        <button class="race-tab ${race === 2 ? 'active' : ''}" onclick="appState.selected500mRace=2; renderCurrentTab()">RACE 2</button>
+                    <div class="race-tabs" style="margin: 0; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 10px;">
+                        <button class="race-tab ${race === 1 ? 'active' : ''}" onclick="appState.selected500mRace=1; renderCurrentTab()" style="margin:0;">RACE 1</button>
+                        <button class="race-tab ${race === 2 ? 'active' : ''}" onclick="appState.selected500mRace=2; renderCurrentTab()" style="margin:0;">RACE 2</button>
                     </div>
                 </div>
 
                 <!-- Smart Paste Section -->
-                <div style="background: rgba(46, 204, 113, 0.05); border: 1px dashed rgba(46, 204, 113, 0.3); border-radius: 8px; padding: 25px; margin-bottom: 40px;">
-                    <div style="display:flex; align-items: center; margin-bottom: 15px; color: #2ecc71;">
-                        <span style="font-size: 1.5em; margin-right: 15px;">📱</span>
-                        <div>
-                            <strong style="display: block; font-size: 1.1em;">Smart Results Paste</strong>
-                            <span style="font-size: 0.85em; opacity: 0.8;">Take photo of results -> "Copy Text" -> Paste below</span>
+                <div style="background: rgba(35, 134, 54, 0.08); border: 1px dashed rgba(35, 134, 54, 0.4); border-radius: 12px; padding: 25px; margin-bottom: 40px; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #238636;"></div>
+                    <div style="display:flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+                        <div style="display:flex; align-items: center; color: #2ecc71;">
+                            <span style="font-size: 1.8em; margin-right: 15px;">📸</span>
+                            <div>
+                                <strong style="display: block; font-size: 1.1em; color: #fff;">Smart Results Paste</strong>
+                                <span style="font-size: 0.9em; opacity: 0.7;">Paste copied text from Google Lens / Photo</span>
+                            </div>
                         </div>
                     </div>
-                    <textarea id="smart-paste-area" class="form-control" rows="3" 
-                        placeholder="1. Erin Jackson 37.60&#10;2. Brittany Bowe 38.04..." 
-                        style="${inputStyle} width: 100%; font-family: monospace; font-size: 0.9em; resize: vertical; border-color: rgba(46, 204, 113, 0.2);"></textarea>
                     
-                    <button class="btn" onclick="processSmartPaste()" style="margin-top: 15px; width: 100%; background: #2ecc71; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s;">
-                        ✨ Process & Add to Race ${race}
-                    </button>
-                    <div id="smart-status" style="margin-top:10px; font-size:0.9em; color:#aaa; text-align: right; min-height: 20px;"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 200px; gap: 15px;">
+                        <textarea id="smart-paste-area" class="form-control" rows="3" 
+                            placeholder="Paste text here... (e.g. '1. Erin Jackson 37.60')" 
+                            style="${inputStyle} width: 100%; background: rgba(0,0,0,0.3); border-color: rgba(35, 134, 54, 0.3); font-family: monospace; min-height: 80px;"></textarea>
+                        
+                        <button class="btn" onclick="processSmartPaste()" style="height: auto; background: #238636; color: #fff; font-weight: 700; border: none; border-radius: 8px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                            <span>⚡ Process</span>
+                            <span style="font-size: 0.7em; opacity: 0.8; font-weight: normal;">& Add to List</span>
+                        </button>
+                    </div>
+                    <div id="smart-status" style="margin-top:10px; font-size:0.85em; color:#aaa; min-height: 20px;"></div>
                 </div>
 
-                <!-- Manual Entry Row -->
+                <!-- Manual Entry Toolbar -->
                  <div style="margin-bottom: 10px;">
-                     <div style="${labelStyle}">Manual Entry</div>
-                     <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 40px 2fr 1fr auto; gap: 15px; align-items: center; border: 1px solid rgba(255,255,255,0.05);">
-                        <span style="font-weight:900; color: #D4AF37; text-align: center; font-size: 1.2em;">${results.length + 1}.</span>
+                     <div style="${labelStyle}">MANUAL DATA ENTRY</div>
+                     <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: grid; grid-template-columns: 50px 3fr 1.5fr auto; gap: 15px; align-items: center; border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="font-weight:900; color: #666; text-align: center; font-size: 1.5em; opacity: 0.5;">
+                            ${results.length + 1}<span style="font-size: 0.5em; vertical-align: top;">.</span>
+                        </div>
                         
                         <div style="position: relative;">
-                            <input type="text" id="athlete-input" list="athlete-names" placeholder="ATHLETE NAME" autocomplete="off" style="${inputStyle} width: 100%; text-transform: uppercase; font-weight: 600;">
+                            <input type="text" id="athlete-input" list="athlete-names" placeholder="ATHLETE NAME" autocomplete="off" 
+                            style="${inputStyle} width: 100%; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                             ${dataListHtml}
                         </div>
                         
-                        <input type="text" id="manual-time" placeholder="TIME (34.50)" style="${inputStyle} width: 100%; text-align: center; font-family: monospace;">
+                        <input type="text" id="manual-time" placeholder="00.00" 
+                        style="${inputStyle} width: 100%; text-align: center; font-family: 'Roboto Mono', monospace; font-size: 1.1em; letter-spacing: 1px;">
                         
-                        <button onclick="addEventResult()" style="background: #D4AF37; color: #000; border: none; padding: 12px 30px; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; height: 100%;">ADD</button>
+                        <button onclick="addEventResult()" style="background: #D4AF37; color: #000; border: none; padding: 14px 35px; border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; height: 100%; transition: transform 0.1s;">
+                            ADD
+                        </button>
                     </div>
                 </div>
 
                 <!-- Results Table -->
-                <table class="data-table mt-4" style="width: 100%; border-collapse: separate; border-spacing: 0 4px;">
+                <table class="data-table mt-4" style="width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 30px;">
                     <thead>
-                        <tr style="color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px;">
-                            <th style="padding: 10px 20px;">Rank</th>
-                            <th style="padding: 10px;">Athlete</th>
-                            <th style="padding: 10px; text-align: center;">Time</th>
-                            <th style="padding: 10px; text-align: right;">Action</th>
+                        <tr style="color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1.5px;">
+                            <th style="padding: 10px 20px; font-weight: 600;">Rank</th>
+                            <th style="padding: 10px 20px; font-weight: 600;">Athlete</th>
+                            <th style="padding: 10px; text-align: center; font-weight: 600;">Time</th>
+                            <th style="padding: 10px; text-align: right; font-weight: 600;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${results.map((r, i) => `
-                            <tr style="background: rgba(255,255,255,0.03); transition: background 0.2s;">
-                                <td style="padding: 15px 20px; border-radius: 6px 0 0 6px; font-weight: 900; color: #fff; font-size: 1.1em;">${i + 1}</td>
-                                <td style="padding: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${r.name}</td>
-                                <td style="padding: 15px; font-family: monospace; color: #D4AF37; font-size: 1.1em; text-align: center;">${r.time || '-'}</td>
-                                <td style="padding: 15px; text-align: right; border-radius: 0 6px 6px 0;">
-                                    <button onclick="removeEventResult(${i})" style="background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Remove</button>
+                            <tr style="background: rgba(255,255,255,0.02); transition: transform 0.2s;">
+                                <td style="padding: 18px 20px; border-radius: 8px 0 0 8px; font-weight: 900; color: #fff; font-size: 1.2em; font-family: 'Outfit', sans-serif;">${i + 1}</td>
+                                <td style="padding: 18px 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #eee;">${r.name}</td>
+                                <td style="padding: 18px; font-family: 'Roboto Mono', monospace; color: #D4AF37; font-size: 1.2em; text-align: center; font-weight: bold;">${r.time || '-'}</td>
+                                <td style="padding: 18px; text-align: right; border-radius: 0 8px 8px 0;">
+                                    <button onclick="removeEventResult(${i})" style="background: transparent; color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase; transition: all 0.2s;">
+                                        Remove
+                                    </button>
                                 </td>
                             </tr>
                         `).join('')}
-                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center" style="padding: 40px; color: #666; font-style: italic;">No entries yet for Race ${race}.</td></tr>` : ''}
+                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center" style="padding: 60px; color: #444; font-style: italic; background: rgba(0,0,0,0.2); border-radius: 8px;">Ready for data entry. Use standard manual entry or smart paste above.</td></tr>` : ''}
                     </tbody>
                 </table>
              </div>
@@ -790,73 +820,86 @@ function renderEventEntry() {
 
         content += `
             <div style="${cardStyle}">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div>
-                        <div style="${labelStyle}">Active Event</div>
-                        <h2 style="margin: 0; color: #fff; font-size: 2em; font-weight: 800; text-transform: uppercase;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <span style="font-size: 0.9em; color: #D4AF37; font-weight: bold; letter-spacing: 1px;">ACTIVE EVENT</span>
+                        <h2 style="margin: 0; color: #fff; font-size: 2.2em; font-weight: 800; letter-spacing: -0.5px;">
                             ${dist}
                         </h2>
-                         <p style="margin: 5px 0 0 0; color: #888; font-size: 0.9em; font-style: italic;">${isTP ? "Enter Team Pursuit Specialists" : "Enter results in finishing order"}</p>
+                         <p style="margin: 5px 0 0 0; color: #888; font-size: 0.9em;">${isTP ? "Enter Team Pursuit Specialists" : "Enter results in finishing order"}</p>
                     </div>
                 </div>
                 
                 <!-- Smart Paste Section -->
-                <div style="background: rgba(46, 204, 113, 0.05); border: 1px dashed rgba(46, 204, 113, 0.3); border-radius: 8px; padding: 25px; margin-bottom: 40px;">
-                     <div style="display:flex; align-items: center; margin-bottom: 15px; color: #2ecc71;">
-                        <span style="font-size: 1.5em; margin-right: 15px;">📱</span>
-                        <div>
-                             <strong style="display: block; font-size: 1.1em;">Smart Results Paste</strong>
-                             <span style="font-size: 0.85em; opacity: 0.8;">Take photo -> Copy Text -> Paste below</span>
+                <div style="background: rgba(35, 134, 54, 0.08); border: 1px dashed rgba(35, 134, 54, 0.4); border-radius: 12px; padding: 25px; margin-bottom: 40px; position: relative; overflow: hidden;">
+                     <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #238636;"></div>
+                     <div style="display:flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+                         <div style="display:flex; align-items: center; color: #2ecc71;">
+                            <span style="font-size: 1.8em; margin-right: 15px;">📸</span>
+                            <div>
+                                 <strong style="display: block; font-size: 1.1em; color: #fff;">Smart Results Paste</strong>
+                                 <span style="font-size: 0.9em; opacity: 0.7;">Paste copied text from Google Lens / Photo</span>
+                            </div>
                         </div>
                     </div>
-                    <textarea id="smart-paste-area" class="form-control" rows="3" 
-                        placeholder="1. Name Time&#10;2. Name Time..." 
-                         style="${inputStyle} width: 100%; font-family: monospace; font-size: 0.9em; resize: vertical; border-color: rgba(46, 204, 113, 0.2);"></textarea>
-                    <button class="btn" onclick="processSmartPaste()" style="margin-top: 15px; width: 100%; background: #2ecc71; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s;">
-                        ✨ Process & Add Results
-                    </button>
-                    <div id="smart-status" style="margin-top:10px; font-size:0.9em; color:#aaa; text-align: right; min-height: 20px;"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 200px; gap: 15px;">
+                        <textarea id="smart-paste-area" class="form-control" rows="3" 
+                            placeholder="Paste text here... (e.g. '1. Name Time')" 
+                             style="${inputStyle} width: 100%; background: rgba(0,0,0,0.3); border-color: rgba(35, 134, 54, 0.3); font-family: monospace; min-height: 80px;"></textarea>
+                        <button class="btn" onclick="processSmartPaste()" style="height: auto; background: #238636; color: #fff; font-weight: 700; border: none; border-radius: 8px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                            <span>⚡ Process</span>
+                            <span style="font-size: 0.7em; opacity: 0.8; font-weight: normal;">& Add Results</span>
+                        </button>
+                    </div>
+                    <div id="smart-status" style="margin-top:10px; font-size:0.85em; color:#aaa; min-height: 20px;"></div>
                 </div>
 
-                <!-- Manual Entry Row -->
+                <!-- Manual Entry Toolbar -->
                  <div style="margin-bottom: 10px;">
-                    <div style="${labelStyle}">Manual Entry</div>
-                     <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 40px 2fr ${!isTP ? '1fr' : ''} auto; gap: 15px; align-items: center; border: 1px solid rgba(255,255,255,0.05);">
-                        <span style="font-weight:900; color: #D4AF37; text-align: center; font-size: 1.2em;">${results.length + 1}.</span>
+                    <div style="${labelStyle}">MANUAL DATA ENTRY</div>
+                     <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: grid; grid-template-columns: 50px 3fr ${!isTP ? '1.5fr' : ''} auto; gap: 15px; align-items: center; border: 1px solid rgba(255,255,255,0.08);">
+                         <div style="font-weight:900; color: #666; text-align: center; font-size: 1.5em; opacity: 0.5;">
+                            ${results.length + 1}<span style="font-size: 0.5em; vertical-align: top;">.</span>
+                        </div>
                         
                         <div style="position: relative;">
-                            <input type="text" id="athlete-input" list="athlete-names" placeholder="ATHLETE NAME" autocomplete="off" style="${inputStyle} width: 100%; text-transform: uppercase; font-weight: 600;">
+                            <input type="text" id="athlete-input" list="athlete-names" placeholder="ATHLETE NAME" autocomplete="off" 
+                            style="${inputStyle} width: 100%; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                             ${dataListHtml}
                         </div>
                         
-                        ${!isTP ? `<input type="text" id="manual-time" placeholder="TIME" style="${inputStyle} width: 100%; text-align: center; font-family: monospace;">` : ''}
+                        ${!isTP ? `<input type="text" id="manual-time" placeholder="00.00" style="${inputStyle} width: 100%; text-align: center; font-family: 'Roboto Mono', monospace; font-size: 1.1em; letter-spacing: 1px;">` : ''}
                         
-                        <button onclick="addEventResult()" style="background: #D4AF37; color: #000; border: none; padding: 12px 30px; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; height: 100%;">ADD</button>
+                        <button onclick="addEventResult()" style="background: #D4AF37; color: #000; border: none; padding: 14px 35px; border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; height: 100%; transition: transform 0.1s;">
+                            ADD
+                        </button>
                     </div>
                 </div>
 
                 <!-- Results Table -->
-                <table class="data-table mt-4" style="width: 100%; border-collapse: separate; border-spacing: 0 4px;">
+                <table class="data-table mt-4" style="width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 30px;">
                     <thead>
-                         <tr style="color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px;">
-                            <th style="padding: 10px 20px;">Rank</th>
-                            <th style="padding: 10px;">Athlete</th>
-                            ${!isTP ? '<th style="padding: 10px; text-align: center;">Time</th>' : ''}
-                            <th style="padding: 10px; text-align: right;">Action</th>
+                         <tr style="color: #666; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1.5px;">
+                            <th style="padding: 10px 20px; font-weight: 600;">Rank</th>
+                            <th style="padding: 10px 20px; font-weight: 600;">Athlete</th>
+                            ${!isTP ? '<th style="padding: 10px; text-align: center; font-weight: 600;">Time</th>' : ''}
+                            <th style="padding: 10px; text-align: right; font-weight: 600;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${results.map((r, i) => `
-                             <tr style="background: rgba(255,255,255,0.03); transition: background 0.2s;">
-                                <td style="padding: 15px 20px; border-radius: 6px 0 0 6px; font-weight: 900; color: #fff; font-size: 1.1em;">${r.rank}</td>
-                                <td style="padding: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${r.name}</td>
-                                ${!isTP ? `<td style="padding: 15px; font-family: monospace; color: #D4AF37; font-size: 1.1em; text-align: center;">${r.time || '-'}</td>` : ''}
-                                <td style="padding: 15px; text-align: right; border-radius: 0 6px 6px 0;">
-                                    <button onclick="removeEventResult(${i})" style="background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Remove</button>
+                             <tr style="background: rgba(255,255,255,0.02); transition: transform 0.2s;">
+                                <td style="padding: 18px 20px; border-radius: 8px 0 0 8px; font-weight: 900; color: #fff; font-size: 1.2em; font-family: 'Outfit', sans-serif;">${r.rank}</td>
+                                <td style="padding: 18px 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #eee;">${r.name}</td>
+                                ${!isTP ? `<td style="padding: 18px; font-family: 'Roboto Mono', monospace; color: #D4AF37; font-size: 1.2em; text-align: center; font-weight: bold;">${r.time || '-'}</td>` : ''}
+                                <td style="padding: 18px; text-align: right; border-radius: 0 8px 8px 0;">
+                                    <button onclick="removeEventResult(${i})" style="background: transparent; color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase; transition: all 0.2s;">
+                                        Remove
+                                    </button>
                                 </td>
                             </tr>
                         `).join('')}
-                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center" style="padding: 40px; color: #666; font-style: italic;">No entries yet.</td></tr>` : ''}
+                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center" style="padding: 60px; color: #444; font-style: italic; background: rgba(0,0,0,0.2); border-radius: 8px;">Ready for data.</td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
