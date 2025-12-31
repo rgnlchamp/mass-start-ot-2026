@@ -3005,7 +3005,7 @@ function exportData() {
     downloadAnchorNode.remove();
 }
 
-function toggleAdminMode() {
+function toggleAdminMode() { // REPLACED
     if (!appState.isAdmin) {
         // Create modal dynamically if it doesn't exist
         if (!document.getElementById('admin-modal')) {
