@@ -205,3 +205,111 @@ function getRankBadgeClass(rank) {
     if (rank === 3) return 'rank-badge-3';
     return '';
 }
+
+// Generate Official Protocol for specific Mass Start Race
+function shareMassStartProtocolPdf(gender, raceNum) {
+    const race = appState.msRaces[gender][raceNum];
+    if (!race || !race.results) {
+        alert("No results saved for this race yet.");
+        return;
+    }
+
+    // Sort: Total Points Desc, then Time
+    const results = Object.values(race.results).sort((a, b) => {
+        if (b.totalRacePoints !== a.totalRacePoints) return b.totalRacePoints - a.totalRacePoints;
+        return (a.rank || 99) - (b.rank || 99);
+    });
+
+    // Create Printer Friendly Window
+    const printWindow = window.open('', '_blank');
+
+    // Build HTML
+    const dateStr = new Date().toLocaleString();
+    const hasTimes = results.some(r => r.time && r.time.trim() !== '');
+
+    // Format race date nicely (e.g., "Sunday, January 5, 2026")
+    const raceDate = race.date ? new Date(race.date) : new Date();
+    const raceDateFormatted = raceDate.toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Protocol ${gender} Race ${raceNum}</title>
+            <style>
+                body { font-family: 'Times New Roman', serif; padding: 40px; }
+                .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+                h1 { font-size: 24px; text-transform: uppercase; margin: 10px 0; }
+                .sub { font-size: 14px; font-style: italic; }
+                .race-date { font-size: 16px; font-weight: bold; margin-top: 10px; }
+                table { width: 100%; border-collapse: collapse; font-size: 14px; }
+                th { border-bottom: 2px solid #000; text-align: left; padding: 5px; }
+                td { border-bottom: 1px solid #ccc; padding: 8px 5px; }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .bold { font-weight: bold; }
+                .footer-sig { margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end; }
+                .line { border-top: 1px solid #000; width: 250px; padding-top: 5px; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div>OFFICIAL PROTOCOL</div>
+                <h1>${gender.toUpperCase()} MASS START - RACE ${raceNum}</h1>
+                <div class="sub">Olympic Team Trials 2026 • Milwaukee, WI</div>
+                <div class="race-date">${raceDateFormatted}</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px;">Rnk</th>
+                        <th>Athlete</th>
+                        <th class="text-center" style="width:60px;">Country</th>
+                        <th class="text-center" style="width:40px;">Laps</th>
+                        <th class="text-center" style="width:35px;">S1</th>
+                        <th class="text-center" style="width:35px;">S2</th>
+                        <th class="text-center" style="width:35px;">S3</th>
+                        <th class="text-center bold" style="width:40px;">S4</th>
+                        <th class="text-center bold" style="width:50px;">Total</th>
+                        ${hasTimes ? '<th class="text-right" style="width:90px;">Time</th>' : ''}
+                        <th class="text-center bold" style="width:60px;">Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${results.map(r => `
+                        <tr>
+                            <td class="bold text-center">${r.rank}</td>
+                            <td style="font-weight:600;">${r.name.toUpperCase()}</td>
+                            <td class="text-center">USA</td>
+                            <td class="text-center">16</td>
+                            <td class="text-center" style="color:#555;">${r.sprints[0] || ''}</td>
+                            <td class="text-center" style="color:#555;">${r.sprints[1] || ''}</td>
+                            <td class="text-center" style="color:#555;">${r.sprints[2] || ''}</td>
+                            <td class="text-center bold">${r.finalPoints || ''}</td>
+                            <td class="text-center bold" style="font-size:14px;">${r.totalRacePoints}</td>
+                            ${hasTimes ? `<td class="text-right" style="font-family:monospace;">${r.time || 'NT'}</td>` : ''}
+                            <td class="text-center bold">${r.acrsPoints || 0}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="footer-sig">
+                <div>
+                    <div class="line">Chief Referee Signature</div>
+                </div>
+                <div>
+                   <div style="font-size:10px;">Generated: ${dateStr}</div>
+                </div>
+            </div>
+            <script>
+                window.onload = function() { window.print(); };
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}

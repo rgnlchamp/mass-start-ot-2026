@@ -638,6 +638,17 @@ function renderDistanceBreakdown(gender) {
 // EVENT ENTRY
 // =============================================================================
 function renderEventEntry() {
+    // Admin Guard
+    if (!appState.isAdmin) {
+        return `
+            <div style="text-align:center; padding:50px; color:#ccc;">
+                <h2>🔒 Admin Access Required</h2>
+                <p>You must be an administrator to enter race results.</p>
+                <button class="btn btn-primary" onclick="toggleAdminMode()" style="margin-top:10px;">Login Here</button>
+            </div>
+        `;
+    }
+
     const gender = appState.viewGender;
     const dist = appState.viewDistance;
     const config = OLYMPIC_CONFIG[gender][dist];
@@ -728,7 +739,7 @@ function renderEventSelectors() {
                 <label>Distance:</label>
                 <select class="form-control" onchange="setDistance(this.value)">
                     ${Object.keys(OLYMPIC_CONFIG[appState.viewGender]).map(d =>
-        `<option value="${d}" ${appState.viewDistance === d ? 'selected' : ''}>${d}</option>`
+        `<option value="${d}" ${appState.viewDistance === d ? 'selected' : ''}>${d.replace(/_/g, ' ').toUpperCase()}</option>`
     ).join('')}
                 </select>
             </div>
@@ -805,6 +816,27 @@ function removeEventResult(index) {
     renderCurrentTab();
 }
 
+function clearMsRace(raceNum, gender) {
+    if (!confirm(`Are you sure you want to CLEAR ALL results for Race ${raceNum}? This cannot be undone.`)) return;
+
+    // Reset Data
+    if (appState.msRaces[gender]) {
+        appState.msRaces[gender][raceNum] = null;
+    }
+
+    // Recalculate Standings
+    calculateMassStartStandings(gender);
+    saveToStorage();
+    renderCurrentTab();
+
+    // Show Toast via global helper if available, or alert
+    const toast = document.createElement('div');
+    toast.innerText = `Race ${raceNum} Data Cleared`;
+    toast.style.cssText = "position:fixed; bottom:20px; right:20px; background:#d9534f; color:white; padding:10px 20px; border-radius:4px; z-index:10000;";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 
 // =============================================================================
 // MASS START SPECIFIC LOGIC
@@ -825,6 +857,8 @@ function renderMsEntryForm(raceNum) {
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3>Entry Form: Race ${raceNum}</h3>
                 <button class="btn btn-success" onclick="submitMsRace(${raceNum}, '${gender}', 16)">💾 Save Results</button>
+                <button class="btn btn-secondary" style="margin-left:5px;" onclick="shareMassStartProtocolPdf('${gender}', ${raceNum})">🖨️ Referee PDF</button>
+                <button class="btn btn-outline-danger" style="margin-left:5px;" onclick="clearMsRace(${raceNum}, '${gender}')">🗑️ Clear</button>
             </div>
             
             <h4 class="mt-1">Intermediate Sprints</h4>
@@ -839,26 +873,28 @@ function renderMsEntryForm(raceNum) {
             
             <h4 class="mt-2">Finish Order</h4>
             <div style="display:flex; gap:10px; margin-bottom:5px; font-size:0.85em; font-weight:bold; color:#555;">
-                <span style="width:150px;">Athlete</span>
-                <span style="width:100px;">Status</span>
-                <span style="width:70px;">Pos</span>
-                <span style="width:80px;">Time</span>
+                <span style="width:200px;">Athlete</span>
+                <span style="width:140px;">Status</span>
+                <span style="width:80px;">Pos</span>
+                <span style="width:120px;">Time</span>
             </div>
             <div id="finish-rows">
                 ${athletes.map(a => `
-                    <div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
-                        <span style="width:150px; font-weight:bold;">${a.name}</span>
-                        <select id="status_${a.id}" class="form-control p-1" style="width:100px;">
+                    <div style="display:flex; gap:10px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #333; align-items:center;">
+                        <span style="width:200px; font-weight:bold; font-size:1.1em;">${a.name}</span>
+                        <select id="status_${a.id}" class="form-control p-1" style="width:140px;">
                             <option value="finished">Finished</option>
+                            <option value="lapped">Lapped</option>
                             <option value="dnf">DNF</option>
-                            <option value="dsq">DSQ</option>
+                            <option value="dsq">DQ</option>
                             <option value="dns">DNS</option>
                         </select>
-                        <select id="pos_${a.id}" class="form-control p-1 pos-select" style="width:70px;" onchange="updateMsDropdowns()">
+                        <select id="pos_${a.id}" class="form-control p-1 pos-select" style="width:80px;" onchange="updateMsDropdowns()">
                             <option value="">-</option>
                             ${Array.from({ length: athletes.length }, (_, i) => i + 1).map(n => `<option value="${n}">${n}</option>`).join('')}
                         </select>
-                        <input type="text" id="time_${a.id}" class="form-control p-1" placeholder="Time" style="width:80px;">
+                        <input type="text" id="time_${a.id}" class="form-control p-1" placeholder="M:SS.ms" style="width:120px;">
+                        <button class="btn btn-sm btn-outline-danger" onclick="document.getElementById('status_${a.id}').value='dns'; this.parentElement.style.display='none';" title="Remove from this race (Set DNS)">❌</button>
                     </div>
                 `).join('')}
             </div>
@@ -923,11 +959,23 @@ function submitMsRace(raceNum, gender, format) {
     // 1. Intermediates
     const intermediates = [];
     for (let i = 0; i < numIntermediates; i++) {
+        const f = document.getElementById(`int${i + 1}_1st`).value;
+        const s = document.getElementById(`int${i + 1}_2nd`).value;
+        const t = document.getElementById(`int${i + 1}_3rd`).value;
+
+        // Validation: No duplicates in same sprint
+        const selected = [f, s, t].filter(v => v !== "");
+        const unique = new Set(selected);
+        if (selected.length !== unique.size) {
+            alert(`Duplicate athlete in Lap ${sprintConfig.intermediateLaps[i]} Sprint. Please fix.`);
+            return;
+        }
+
         intermediates.push({
             lap: sprintConfig.intermediateLaps[i],
-            first: document.getElementById(`int${i + 1}_1st`).value,
-            second: document.getElementById(`int${i + 1}_2nd`).value,
-            third: document.getElementById(`int${i + 1}_3rd`).value
+            first: f,
+            second: s,
+            third: t
         });
     }
 
@@ -941,6 +989,7 @@ function submitMsRace(raceNum, gender, format) {
         if (pos || status !== 'finished') {
             finishOrder.push({
                 athleteId: a.id,
+                name: a.name, // Save Name
                 status: status,
                 position: pos ? parseInt(pos) : null,
                 time: time
@@ -965,7 +1014,8 @@ function calculateRacePoints(finishOrder, intermediates, sprintConfig) {
     const results = {};
     finishOrder.forEach(f => {
         results[f.athleteId] = {
-            intermediatePoints: 0, sprints: [], finalPoints: 0, totalRacePoints: 0,
+            id: f.athleteId, name: f.name, // Copy Name
+            intermediatePoints: 0, sprints: [0, 0, 0], finalPoints: 0, totalRacePoints: 0,
             finishPosition: f.position, time: f.time, status: f.status
         };
     });
@@ -975,6 +1025,7 @@ function calculateRacePoints(finishOrder, intermediates, sprintConfig) {
             if (id && results[id]) {
                 const pts = sprintConfig.intermediate[place];
                 results[id].intermediatePoints += pts;
+                results[id].sprints[idx] = pts; // Assign to specific sprint index
             }
         });
     });
@@ -985,12 +1036,30 @@ function calculateRacePoints(finishOrder, intermediates, sprintConfig) {
         }
     });
 
-    Object.values(results).forEach(r => r.totalRacePoints = r.intermediatePoints + r.finalPoints);
+    Object.values(results).forEach(r => {
+        // Rule: Skaters who do not finish lose intermediate points
+        if (r.status !== 'finished') {
+            r.intermediatePoints = 0;
+            r.sprints = [0, 0, 0];
+            r.finalPoints = 0;
+        }
+        r.totalRacePoints = r.intermediatePoints + r.finalPoints;
+    });
 
     // Sort and Rank
     const sorted = Object.entries(results).sort((a, b) => {
+        // 1. Points (Desc)
         if (b[1].totalRacePoints !== a[1].totalRacePoints) return b[1].totalRacePoints - a[1].totalRacePoints;
-        return (a[1].finishPosition || 999) - (b[1].finishPosition || 999);
+
+        // 2. Finish Position (Asc)
+        const posA = a[1].finishPosition || 999;
+        const posB = b[1].finishPosition || 999;
+        if (posA !== posB) return posA - posB;
+
+        // 3. Time (Asc) - Fallback for Rule 6.2.c (if pos not entered)
+        const timeA = a[1].time || 'ZZZ'; // ZZZ to put NT/Empty at bottom
+        const timeB = b[1].time || 'ZZZ';
+        return timeA.localeCompare(timeB, undefined, { numeric: true });
     });
 
     sorted.forEach(([id, r], idx) => {
@@ -1720,7 +1789,7 @@ function showSkatersToWatch(gender, dist) {
                 <div style="padding: 20px 30px; display: flex; flex-direction: column; gap: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <button id="insta-download-btn" onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn btn-sm" style="background: #333; color:white; border:none; border-radius: 4px; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px; padding: 6px 12px; cursor: pointer; opacity: 0.6;">PREPARING...</button>
-                        <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; line-height: 1;">&times;</button>
+                        <button onclick="document.getElementById('skaters-modal').remove()" style="background: rgba(255,255,255,0.1); border: 1px solid #555; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; padding: 8px 16px; border-radius: 4px; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕ CLOSE</button>
                     </div>
 
                     <div style="border-left: 6px solid #D4AF37; padding-left: 15px; margin-bottom: 15px;">
@@ -1751,7 +1820,7 @@ function showSkatersToWatch(gender, dist) {
                         <div style="font-size: 14px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase;">
                             <span style="color: #fff;">@SALTY</span><span style="color: #D4AF37;">GOLD</span><span style="color: #fff;">SUPPLY</span>
                         </div>
-                        <div style="font-size: 10px; color: #888; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">SALTYGOLDSUPPLY.COM</div>
+                        <button onclick="document.getElementById('skaters-modal').remove()" style="background: #333; border: none; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; padding: 10px 20px; border-radius: 6px;">✕ CLOSE</button>
                     </div>
                 </div>
             </div>
@@ -1877,6 +1946,11 @@ function shareMsStandingsPdf() {
     const pdfPadding = athleteCount <= 12 ? 12 : athleteCount <= 16 ? 10 : 8;
     const pdfFontSize = athleteCount <= 12 ? 14 : athleteCount <= 16 ? 12 : 10;
 
+    // Get current date formatted nicely
+    const todayFormatted = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
     // Create printable HTML with Instagram-style design
     const printHtml = `
         <!DOCTYPE html>
@@ -1898,6 +1972,7 @@ function shareMsStandingsPdf() {
                 .header-brand { font-size: 11px; color: #888; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; font-weight: 600; }
                 .header-title { font-size: 36px; font-weight: 900; color: #000; text-transform: uppercase; margin: 0; letter-spacing: -1px; }
                 .header-subtitle { font-size: 16px; color: #D4AF37; margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+                .header-date { font-size: 14px; color: #333; margin-top: 10px; font-weight: 600; }
                 
                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
                 
@@ -1964,6 +2039,7 @@ function shareMsStandingsPdf() {
                 <div class="header-brand">${getBranding('EVENT_NAME')}</div>
                 <div class="header-title">${genderLabel} Mass Start</div>
                 <div class="header-subtitle" style="color:#d9534f;">Unofficial Series Standings</div>
+                <div class="header-date">${todayFormatted}</div>
                 <div style="font-size:12px; color:#666; margin-top:5px; font-weight:bold;">* Best 3 of 4 Scores Count</div>
             </div>
 
@@ -2122,7 +2198,7 @@ function showSkatersToWatch(gender, dist) {
                     <div style="font-size: 15px; font-weight: 900; letter-spacing: 0; text-shadow: 0 0 8px rgba(255,255,255,0.1);">
                         <span style="color: #fff;">@SALTY</span><span style="color: #C9A227; text-shadow: 0 0 10px rgba(201, 162, 39, 0.4);">GOLD</span><span style="color: #fff;">SUPPLY</span>
                     </div>
-                    <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">SALTYGOLDSUPPLY.COM</div>
+                    <button onclick="document.getElementById('skaters-modal').remove()" style="background: #333; border: none; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; padding: 10px 20px; border-radius: 6px;">✕ CLOSE</button>
                 </div>
 
                 <!-- Download Button -->
@@ -2493,6 +2569,7 @@ function updateBranding() {
 // =============================================================================
 function checkAdminStatus() {
     const isAdmin = localStorage.getItem('salty_admin_access') === 'true';
+    appState.isAdmin = isAdmin;
     const adminElements = document.querySelectorAll('.admin-only');
 
     adminElements.forEach(el => {
