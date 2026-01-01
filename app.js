@@ -334,6 +334,12 @@ function renderOlympicTeamTracker() {
                     <h3>Predicted ${gender === 'women' ? "Women's" : "Men's"} Roster</h3>
                 </div>
                 
+                <div style="background:rgba(220, 53, 69, 0.1); border:1px solid #dc3545; border-radius:8px; padding:10px 15px; margin-bottom:15px; font-size:0.85rem;">
+                    <strong style="color:#dc3545;">⚠️ UNOFFICIAL PROJECTION:</strong> 
+                    This roster is based on data entered into this tracker and does <em>not</em> represent official results or selections from U.S. Speedskating. 
+                    Official team selections are made by USS following the completion of all qualifying events.
+                </div>
+                
                 <div class="table-container">
                 <table class="data-table">
                     <thead>
@@ -461,7 +467,13 @@ function calculateReduction(gender) {
                 qualifiers.push({ name: `Team Pursuit Slot ${i + 1}`, ranking: conversion, type: 'TpSpec' });
             }
         } else {
-            trialsResults = (appState.events[gender][dist].results || []).sort((a, b) => a.rank - b.rank);
+            // Only include trials results if the event is published
+            const eventData = appState.events[gender][dist];
+            if (eventData.status === 'published') {
+                trialsResults = (eventData.results || []).sort((a, b) => a.rank - b.rank);
+            } else {
+                trialsResults = []; // Pending results don't affect roster
+            }
         }
 
         // Add standard event qualifiers
@@ -675,8 +687,19 @@ function renderEventEntry() {
         `;
     } else {
         const isTP = (dist === 'team_pursuit');
+        const is500 = (dist === '500m');
         const results = appState.events[gender][dist].results || [];
-        results.sort((a, b) => a.rank - b.rank);
+
+        // Sort: for 500m sort by best time, otherwise by rank
+        if (is500) {
+            results.sort((a, b) => {
+                if (!a.best) return 1;
+                if (!b.best) return -1;
+                return a.best.localeCompare(b.best);
+            });
+        } else {
+            results.sort((a, b) => a.rank - b.rank);
+        }
 
         // Prepare datalist for autocomplete
         const existingAthletes = appState.athletes.filter(a => a.gender === gender);
@@ -686,19 +709,51 @@ function renderEventEntry() {
             </datalist>
         `;
 
+        // Get current publish status
+        const eventData = appState.events[gender][dist];
+        const isPublished = eventData.status === 'published';
+        const statusBadge = isPublished
+            ? '<span style="background:#22c55e; color:#fff; padding:4px 12px; border-radius:4px; font-size:0.85rem; font-weight:bold;">✅ PUBLISHED</span>'
+            : '<span style="background:#f59e0b; color:#000; padding:4px 12px; border-radius:4px; font-size:0.85rem; font-weight:bold;">⏳ PENDING</span>';
+
         content += `
             <div class="card mt-2">
-                <h3>🏁 ${gender === 'women' ? "Women's" : "Men's"} ${dist}</h3>
-                <p class="text-muted">${isTP ? "Type names of Team Pursuit Specialists." : "Type names in finishing order (1st, 2nd, etc). New names will be auto-added."}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                    <div>
+                        <h3 style="margin:0;">🏁 ${gender === 'women' ? "Women's" : "Men's"} ${dist}</h3>
+                        <p class="text-muted" style="margin:5px 0 0 0;">${isTP ? "Type names of Team Pursuit Specialists." : is500 ? "Enter athlete and both 500m race times. Ranking is by fastest of the two." : "Type names in finishing order (1st, 2nd, etc). New names will be auto-added."}</p>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        ${statusBadge}
+                        ${isPublished
+                ? `<button class="btn btn-sm btn-outline-warning" onclick="togglePublishStatus('${gender}', '${dist}')">📝 Unpublish</button>`
+                : `<button class="btn btn-sm btn-success" onclick="togglePublishStatus('${gender}', '${dist}')" ${results.length === 0 ? 'disabled title="Add results first"' : ''}>🚀 Publish to Roster</button>`
+            }
+                    </div>
+                </div>
+                
+                ${!isPublished && results.length > 0 ? `
+                    <div style="background:rgba(245, 158, 11, 0.1); border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:15px;">
+                        <strong style="color:#f59e0b;">⚠️ Preview Mode:</strong> 
+                        These results are visible in Standings but will NOT appear on the Predicted Team Roster until you click "Publish to Roster".
+                    </div>
+                ` : ''}
                 
                 <div class="form-group mb-1 p-2" style="background:#f9f9f9; border-radius:8px;">
-                     <div style="display:flex; gap:10px; align-items:center;">
+                     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                         <span style="font-weight:bold; font-size:1.2em; width:30px; text-align:center;">${results.length + 1}.</span>
-                        <div style="flex:2">
+                        <div style="flex:2; min-width:150px;">
                             <input type="text" id="athlete-input" list="athlete-names" class="form-control" placeholder="Type Athlete Name" autocomplete="off">
                             ${dataListHtml}
                         </div>
-                        ${!isTP ? `<div style="flex:1">
+                        ${is500 ? `
+                            <div style="flex:1; min-width:100px;">
+                                <input type="text" id="time1-input" class="form-control" placeholder="Race 1 Time">
+                            </div>
+                            <div style="flex:1; min-width:100px;">
+                                <input type="text" id="time2-input" class="form-control" placeholder="Race 2 Time">
+                            </div>
+                        ` : !isTP ? `<div style="flex:1; min-width:100px;">
                             <input type="text" id="manual-time" class="form-control" placeholder="Time (Optional)">
                         </div>` : ''}
                         <button class="btn btn-primary" onclick="addEventResult()">Add</button>
@@ -706,17 +761,26 @@ function renderEventEntry() {
                 </div>
 
                 <table class="data-table mt-1">
-                    <thead><tr><th style="width:50px">Rank</th><th>Athlete</th>${!isTP ? '<th>Time</th>' : ''}<th>Action</th></tr></thead>
+                    <thead><tr>
+                        <th style="width:50px">Rank</th>
+                        <th>Athlete</th>
+                        ${is500 ? '<th class="text-center">Race 1</th><th class="text-center">Race 2</th><th class="text-center" style="color:#D4AF37;">Best</th>' : !isTP ? '<th>Time</th>' : ''}
+                        <th>Action</th>
+                    </tr></thead>
                     <tbody>
                         ${results.map((r, i) => `
                             <tr>
-                                <td>${r.rank}</td>
+                                <td>${i + 1}</td>
                                 <td>${r.name}</td>
-                                ${!isTP ? `<td>${r.time || '-'}</td>` : ''}
+                                ${is500 ? `
+                                    <td class="text-center">${r.time1 || '-'}</td>
+                                    <td class="text-center">${r.time2 || '-'}</td>
+                                    <td class="text-center" style="font-weight:bold; color:#D4AF37;">${r.best || '-'}</td>
+                                ` : !isTP ? `<td>${r.time || '-'}</td>` : ''}
                                 <td><button class="btn btn-sm btn-danger" onclick="removeEventResult(${i})"> Remove</button></td>
                             </tr>
                         `).join('')}
-                        ${results.length === 0 ? `<tr><td colspan="4" class="text-center text-muted">No entries yet.</td></tr>` : ''}
+                        ${results.length === 0 ? `<tr><td colspan="${is500 ? 6 : 4}" class="text-center text-muted">No entries yet.</td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
@@ -757,9 +821,30 @@ function addEventResult() {
     const name = nameInput.value.trim();
     if (!name) return;
 
-    // Time is optional
-    const timeInput = document.getElementById('manual-time');
-    const time = timeInput ? timeInput.value : '';
+    const dist = appState.viewDistance;
+    const is500 = (dist === '500m');
+
+    // For 500m, get both times; for others get single time
+    let time = '', time1 = '', time2 = '', best = '';
+
+    if (is500) {
+        const time1Input = document.getElementById('time1-input');
+        const time2Input = document.getElementById('time2-input');
+        time1 = time1Input ? time1Input.value.trim() : '';
+        time2 = time2Input ? time2Input.value.trim() : '';
+
+        // Calculate best (fastest) time
+        if (time1 && time2) {
+            best = time1 < time2 ? time1 : time2;
+        } else if (time1) {
+            best = time1;
+        } else if (time2) {
+            best = time2;
+        }
+    } else {
+        const timeInput = document.getElementById('manual-time');
+        time = timeInput ? timeInput.value.trim() : '';
+    }
 
     // Find or Create Athlete
     let athlete = appState.athletes.find(a => a.name.toLowerCase() === name.toLowerCase() && a.gender === appState.viewGender);
@@ -784,14 +869,23 @@ function addEventResult() {
         return;
     }
 
-    // Add Result
+    // Add Result - different structure for 500m
     const rank = currentResults.length + 1;
-    appState.events[appState.viewGender][appState.viewDistance].results.push({
+    const newResult = {
         id: athlete.id,
         name: athlete.name,
-        rank: rank,
-        time: time
-    });
+        rank: rank
+    };
+
+    if (is500) {
+        newResult.time1 = time1;
+        newResult.time2 = time2;
+        newResult.best = best;
+    } else {
+        newResult.time = time;
+    }
+
+    appState.events[appState.viewGender][appState.viewDistance].results.push(newResult);
 
     saveToStorage();
     renderCurrentTab();
@@ -811,6 +905,36 @@ function removeEventResult(index) {
     results.forEach((r, idx) => {
         r.rank = idx + 1;
     });
+
+    saveToStorage();
+    renderCurrentTab();
+}
+
+function togglePublishStatus(gender, dist) {
+    const eventData = appState.events[gender][dist];
+    const currentStatus = eventData.status;
+
+    if (currentStatus === 'published') {
+        // Unpublishing - confirm first
+        if (!confirm(`⚠️ Unpublish ${gender.toUpperCase()} ${dist} results?\n\nThis will REMOVE these results from the Predicted Team Roster until you publish again.`)) {
+            return;
+        }
+        eventData.status = 'pending';
+        showToast(`📝 ${gender} ${dist} results unpublished (now in Preview Mode)`);
+    } else {
+        // Publishing - confirm the results look correct
+        const resultsCount = eventData.results?.length || 0;
+        if (resultsCount === 0) {
+            alert('Cannot publish: No results entered yet.');
+            return;
+        }
+
+        if (!confirm(`🚀 Publish ${gender.toUpperCase()} ${dist} results?\n\n${resultsCount} athletes will now appear on the Predicted Team Roster.\n\nAre you sure these results are correct?`)) {
+            return;
+        }
+        eventData.status = 'published';
+        showToast(`✅ ${gender} ${dist} results PUBLISHED to Team Roster!`);
+    }
 
     saveToStorage();
     renderCurrentTab();
@@ -1111,8 +1235,20 @@ function calculateMassStartStandings(gender) {
         }
     });
 
-    // Sort by total points descending
-    return Object.values(athleteScores).sort((a, b) => b.total - a.total);
+    // Store Race 4 score for tiebreaker purposes
+    Object.values(athleteScores).forEach(s => {
+        s.race4Score = s.races[4] !== undefined ? s.races[4] : -1; // -1 if no Race 4 result
+    });
+
+    // Sort by total points descending, then by Race 4 score (tiebreaker)
+    return Object.values(athleteScores).sort((a, b) => {
+        // Primary sort: total points (higher is better)
+        if (b.total !== a.total) {
+            return b.total - a.total;
+        }
+        // Tiebreaker: better performance in Race 4 (higher score wins)
+        return b.race4Score - a.race4Score;
+    });
 }
 
 // =============================================================================
@@ -2570,16 +2706,13 @@ function updateBranding() {
 function checkAdminStatus() {
     const isAdmin = localStorage.getItem('salty_admin_access') === 'true';
     appState.isAdmin = isAdmin;
-    const adminElements = document.querySelectorAll('.admin-only');
 
-    adminElements.forEach(el => {
-        if (isAdmin) {
-            if (el.classList.contains('nav-tab')) el.style.display = 'inline-block';
-            else el.style.display = 'block';
-        } else {
-            el.style.display = 'none';
-        }
-    });
+    // Toggle admin-mode class on body to control CSS visibility of .admin-only elements
+    if (isAdmin) {
+        document.body.classList.add('admin-mode');
+    } else {
+        document.body.classList.remove('admin-mode');
+    }
 
     const loginBtn = document.getElementById('admin-login-btn');
     if (loginBtn) {
