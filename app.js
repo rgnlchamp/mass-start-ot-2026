@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeState();
     setupNavigation();
     updateBranding();
+    checkAdminStatus();
     renderCurrentTab();
 });
 
@@ -189,22 +190,13 @@ function renderDashboard() {
                 </div>
                 <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
                     <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">2. Rank</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Earn a Quota Spot</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">The Team has a limited number of "tickets" (quotas) for each distance. Often, only the top 2 or 3 finishers get to go.</p>
+                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">We Need a "Ticket"</p>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">The USA only has a set number of spots for each race. Even if you medal here, we need to have an Olympic "ticket" for you to use.</p>
                 </div>
                 <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
                     <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">3. Survive</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Avoid the "Cut"</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">The Team is capped at <b>8 Men and 6 Women</b>. If more people qualify, the skaters with the lowest "SOQC Rankings" get cut.</p>
-                </div>
-            </div>
-
-            <div style="background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.2); padding: 12px 18px; border-radius: 6px; display: flex; align-items: center; gap: 15px;">
-                <span style="font-size: 1.4rem;">USA</span>
-                <div>
-                    <b style="color: var(--accent-gold); font-size: 0.85rem; display: block; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Team Size Limit</b>
-                    <p style="font-size: 0.8rem; color: #fff; margin: 0; opacity: 0.9;">Based on Fall World Cup results, The Team is restricted to <b>8 Men and 6 Women</b> for the 2026 Games.</p>
-                </div>
+                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">The 14 Skater Limit</p>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">We can only take <b>8 Men and 6 Women</b> total. If more people qualify, those with the lowest <b>World Rankings</b> get left home.</p>
             </div>
         </div>
 
@@ -1010,8 +1002,29 @@ function calculateMassStartStandings(gender) {
     });
 
     Object.values(athleteScores).forEach(s => {
-        // Simple Total for now - implement "Best 3 of 4" if needed strictly
-        s.total = Object.values(s.races).reduce((sum, v) => sum + v, 0);
+        // Best 3 of 4 Logic
+        const raceNums = [1, 2, 3, 4];
+        const scores = [];
+        raceNums.forEach(r => {
+            if (s.races[r] !== undefined) {
+                scores.push({ race: r, score: s.races[r] });
+            }
+        });
+
+        // Sort desc by score
+        scores.sort((a, b) => b.score - a.score);
+
+        // Sum top 3
+        const top3 = scores.slice(0, 3);
+        s.total = top3.reduce((sum, item) => sum + item.score, 0);
+
+        // Identify dropped (lowest) races if 4 raced
+        if (scores.length > 3) {
+            const top3Races = new Set(top3.map(i => i.race));
+            s.droppedRaces = scores.filter(i => !top3Races.has(i.race)).map(i => i.race);
+        } else {
+            s.droppedRaces = [];
+        }
     });
 
     // Sort by total points descending
@@ -1205,7 +1218,7 @@ function renderRules() {
                             <td style="font-weight:bold; padding: 12px;">${distName}</td>
                             <td style="text-align:center; font-size: 1.1em;">${q.quota}</td>
                             <td>${isTP
-                ? '<span class="badge" style="background:#22c55e; color:black;">Discretionary</span>'
+                ? '<span style="color:#666;">-</span>'
                 : (q.preNominated.length ? q.preNominated.map(name => {
                     const color = '#22c55e'; // All Green
                     const text = `${name} ✓`;
@@ -1216,7 +1229,7 @@ function renderRules() {
                                 ${spotsAvailable}
                             </td>
                             <td style="color:#fff; font-family:monospace; font-size:1.4em; font-weight:bold;">
-                                ${isTP ? `Protected` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}
+                                ${isTP ? `<span class="badge" style="background:#22c55e; color:black;">2x Specialists (If Needed)</span>` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}
                             </td>
                         </tr>
                     `}).join('')}
@@ -1243,21 +1256,13 @@ function renderRules() {
                 </div>
                 <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
                     <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">2. Rank</div>
-                    <strong style="color: #fff; display:block; margin-bottom:5px;">Earn a Quota Spot</strong>
-                    <p style="font-size: 0.9em; color: #aaa;">${getBranding('TEAM_NAME')} has a limited number of "tickets" (quotas) for each distance. Often, only the top 2 or 3 finishers get to go.</p>
+                    <strong style="color: #fff; display:block; margin-bottom:5px;">We Need a "Ticket"</strong>
+                    <p style="font-size: 0.9em; color: #aaa;">The USA only has a set number of spots for each race. Even if you medal here, we need to have an Olympic "ticket" for you to use.</p>
                 </div>
                 <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
                     <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">3. Survive</div>
-                    <strong style="color: #fff; display:block; margin-bottom:5px;">Avoid the "Cut"</strong>
-                    <p style="font-size: 0.9em; color: #aaa;">${getBranding('TEAM_NAME')} is capped at <strong>8 Men</strong> and <strong>6 Women</strong>. If more people qualify, the skaters with the lowest "SOQC Rankings" get cut.</p>
-                </div>
-            </div>
-
-            <div style="background: rgba(212, 175, 55, 0.1); border: 1px solid #D4AF37; border-radius: 8px; padding: 15px; display: flex; align-items: center; gap: 15px;">
-                <div style="font-size: 2em;">🦅</div>
-                <div>
-                    <strong style="color: #D4AF37;">Team Size Limit</strong>
-                    <p style="margin: 0; font-size: 0.9em;">Based on Fall World Cup results, ${getBranding('TEAM_NAME')} is restricted to <strong style="color:white;">8 Men</strong> and <strong style="color:white;">6 Women</strong> for the 2026 Games.</p>
+                    <strong style="color: #fff; display:block; margin-bottom:5px;">The 14 Skater Limit</strong>
+                    <p style="font-size: 0.9em; color: #aaa;">We can only take <strong>8 Men</strong> and <strong>6 Women</strong> total. If more people qualify, those with the lowest <strong>World Rankings</strong> get left home.</p>
                 </div>
             </div>
         </div>
@@ -1295,9 +1300,10 @@ function renderRules() {
             <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.9em;">
                 <h4 style="color: #666; margin-bottom: 10px;">Technical Terminology</h4>
                 <ul style="list-style: none; padding: 0;">
-                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">SOQC (Special Olympic Qualification Classification):</strong> The "priority ranking" of every quota spot. Lower number = Safer from being cut.</li>
-                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Direct Qualification:</strong> Skaters who medaled at World Championships are "Protected" and cannot be cut.</li>
-                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Team Pursuit Specialists:</strong> Up to 2 skaters can be selected specifically for TP, but they count towards the team cap.</li>
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">World Ranking (SOQC):</strong> Your global rank based on World Cups. Used to decide who gets cut if we qualify more than 14 skaters.</li>
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Direct Nomination:</strong> "Protected" status earned <em>before</em> these Trials by winning major World Cup medals. These athletes are already safe.</li>
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Trials Qualification:</strong> Earning your spot by finishing on the podium (Top 2 or 3) right here at the Olympic Trials.</li>
+                    <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Team Pursuit Specialists:</strong> Up to 2 skaters selected specifically for the Team event (they count toward the 8 Men / 6 Women cap).</li>
                 </ul>
             </div>
         </div>
@@ -1420,7 +1426,7 @@ function shareMsStandingsImage() {
     // Create a container specifically for the image capture
     const exportContainer = document.createElement('div');
     exportContainer.style.cssText = `
-        position: fixed; top: 0; left: 0;
+        position: fixed; top: 0; left: -9999px;
         width: 1080px; height: 1350px; /* Instagram Portrait 4:5 */
         background: radial-gradient(circle at top, #1a1a2e, #000);
         color: white; font-family: 'Segoe UI', sans-serif;
@@ -1452,25 +1458,47 @@ function shareMsStandingsImage() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${displayAthletes.map((s, i) => `
-                        <tr style="background: rgba(255,255,255,0.05); font-size: 24px;">
-                            <td style="padding: 6px 20px; font-weight: 900; color: #D4AF37;">${i + 1}</td>
-                            <td style="padding: 6px 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[1] || '-'}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[2] || '-'}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[3] || '-'}</td>
-                            <td style="padding: 6px 5px; color: #fff; font-size: 24px; font-weight: bold; text-align: center; font-family: monospace;">${s.races[4] || '-'}</td>
-                            <td style="padding: 6px 25px 6px 0; text-align: right; font-weight: bold; font-family: monospace; font-size: 30px;">
+                    ${displayAthletes.map((s, i) => {
+        const rank = i + 1;
+        let bgStyle = 'background: rgba(255,255,255,0.02);'; // Default
+        let rankColor = '#666';
+        let rankScale = '1.0';
+
+        if (rank === 1) {
+            bgStyle = 'background: linear-gradient(90deg, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0) 100%); border-left: 4px solid #D4AF37;';
+            rankColor = '#D4AF37'; rankScale = '1.3';
+        }
+        else if (rank === 2) {
+            bgStyle = 'background: linear-gradient(90deg, rgba(192,192,192,0.2) 0%, rgba(192,192,192,0) 100%); border-left: 4px solid #C0C0C0;';
+            rankColor = '#C0C0C0'; rankScale = '1.2';
+        }
+        else if (rank === 3) {
+            bgStyle = 'background: linear-gradient(90deg, rgba(205,127,50,0.2) 0%, rgba(205,127,50,0) 100%); border-left: 4px solid #CD7F32;';
+            rankColor = '#CD7F32'; rankScale = '1.2';
+        } else if (i % 2 === 0) {
+            bgStyle = 'background: rgba(255,255,255,0.05);';
+        }
+
+        return `
+                        <tr style="${bgStyle} height: 60px;">
+                            <td style="padding: 0 20px; font-weight: 900; color: ${rankColor}; font-size: ${24 * parseFloat(rankScale)}px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${rank}</td>
+                            <td style="padding: 0 10px; font-weight: 700; font-size: 24px; color: ${rank === 1 ? '#fff' : '#ddd'}; letter-spacing: 0.5px;">${s.name.toUpperCase()}</td>
+                            <td style="color: #888; font-size: 20px; font-weight: 500; text-align: center; font-family: monospace;">${s.races[1] || '<span style="opacity:0.2">-</span>'}</td>
+                            <td style="color: #888; font-size: 20px; font-weight: 500; text-align: center; font-family: monospace;">${s.races[2] || '<span style="opacity:0.2">-</span>'}</td>
+                            <td style="color: #888; font-size: 20px; font-weight: 500; text-align: center; font-family: monospace;">${s.races[3] || '<span style="opacity:0.2">-</span>'}</td>
+                            <td style="color: #888; font-size: 20px; font-weight: 500; text-align: center; font-family: monospace;">${s.races[4] || '<span style="opacity:0.2">-</span>'}</td>
+                            <td style="padding-right: 25px; text-align: right; font-weight: 900; font-family: monospace; font-size: 36px; color: ${rank <= 3 ? '#D4AF37' : '#fff'}; text-shadow: 0 0 10px rgba(0,0,0,0.3);">
                                 ${s.total}
                             </td>
                         </tr>
-                    `).join('')}
+                    `;
+    }).join('')}
                 </tbody>
             </table>
         </div>
 
         <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 18px; margin-top: 10px; font-style: italic; letter-spacing: 1px;">
-            * Official selection based on best 3 of 4 race results
+            * Lowest score dropped if 4 races completed
         </div>
 
         <div style="text-align: center; margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -1733,103 +1761,136 @@ function shareMsStandingsPdf() {
             <style>
                 @page { margin: 0.5in; }
                 body { 
-                    font-family: Arial, sans-serif; 
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
                     padding: 40px;
-                    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-                    color: white;
-                    min-height: 100vh;
-                    margin: 0;
+                    background: white;
+                    color: #333;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                     color-adjust: exact !important;
                 }
-                .header { text-align: center; margin-bottom: 30px; }
-                .header-top { font-size: 18px; color: #D4AF37; margin-bottom: 10px; }
-                .header-title { font-size: 36px; font-weight: bold; color: #fff; margin-bottom: 10px; }
-                .header-subtitle { font-size: 24px; color: #D4AF37; }
-                .subtitle { text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 25px; font-size: 14px; }
-                table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    background: rgba(255,255,255,0.1);
-                    border-radius: 10px;
-                    overflow: hidden;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                }
+                .header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee; }
+                .header-brand { font-size: 11px; color: #888; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; font-weight: 600; }
+                .header-title { font-size: 36px; font-weight: 900; color: #000; text-transform: uppercase; margin: 0; letter-spacing: -1px; }
+                .header-subtitle { font-size: 16px; color: #D4AF37; margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+                
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                
+                /* Black Header */
+                thead tr { background-color: #000 !important; color: #fff !important; }
                 th { 
-                    background: rgba(212,175,55,0.3); 
-                    color: #D4AF37; 
-                    padding: ${pdfPadding}px;
-                    font-size: ${pdfFontSize}px;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                }
-                td { 
-                    padding: ${pdfPadding}px; 
                     text-align: center;
-                    border-bottom: 1px solid rgba(255,255,255,0.1);
-                    font-size: ${pdfFontSize}px;
+                    padding: 14px 10px;
+                    font-weight: 700;
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    color: #fff !important;
+                    letter-spacing: 1px;
+                    border: none;
                 }
-                .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500) !important; color: #000; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0) !important; color: #000; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513) !important; color: #fff; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .name { text-align: left; font-weight: bold; }
-                .total { font-weight: bold; color: #D4AF37; font-size: 16px; }
+                th.text-left { text-align: left; padding-left: 20px; }
+                
+                td { 
+                    padding: 14px 10px; 
+                    text-align: center;
+                    border-bottom: 1px solid #f0f0f0;
+                    font-size: 14px;
+                    color: #444;
+                    vertical-align: middle;
+                }
+                td.name { text-align: left; font-weight: 700; font-size: 15px; color: #000; padding-left: 20px; }
+                
+                /* Rank Badges */
+                .rank-cell { display: flex; justify-content: center; align-items: center; }
+                .rank-badge {
+                    display: inline-block;
+                    width: 24px;
+                    height: 24px;
+                    line-height: 24px;
+                    border-radius: 50%;
+                    text-align: center;
+                    font-size: 12px;
+                    font-weight: 900;
+                    color: #fff;
+                    background: #eee; /* Default */
+                }
+                .rank-badge-1 { background-color: #D4AF37 !important; color: #fff; box-shadow: 0 2px 4px rgba(212,175,55,0.3); }
+                .rank-badge-2 { background-color: #A0A0A0 !important; color: #fff; }
+                .rank-badge-3 { background-color: #CD7F32 !important; color: #fff; }
+                .rank-badge-common { background: transparent; color: #000; font-size: 16px; font-weight: 900; }
+
+                .total { font-weight: 900; color: #000; font-size: 16px; }
+                
                 .footer { 
-                    text-align: center; 
-                    margin-top: 30px; 
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 50px; 
                     padding-top: 20px;
-                    border-top: 1px solid rgba(255,255,255,0.1);
+                    border-top: 2px solid #000;
+                    font-size: 10px; 
+                    color: #666; 
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
-                .footer-note { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
-                .footer-brand { font-size: 14px; color: #D4AF37; }
-                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             </style>
         </head>
         <body>
             <div class="header">
-                <div class="header-top">★ ${getBranding('EVENT_NAME').toUpperCase()} ★</div>
-                <div class="header-title">🏆 Mass Start Standings</div>
-                <div class="header-subtitle">${genderLabel} Overall Points</div>
+                <div class="header-brand">${getBranding('EVENT_NAME')}</div>
+                <div class="header-title">${genderLabel} Mass Start</div>
+                <div class="header-subtitle" style="color:#d9534f;">Unofficial Series Standings</div>
+                <div style="font-size:12px; color:#666; margin-top:5px; font-weight:bold;">* Best 3 of 4 Scores Count</div>
             </div>
-            <p class="subtitle">Accumulated points from Races 1-4 (Best 3 of 4 for official selection)</p>
+
             <table>
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th style="text-align:left;">Athlete</th>
-                        <th>R1</th>
-                        <th>R2</th>
-                        <th>R3</th>
-                        <th>R4</th>
-                        <th>Total</th>
+                        <th style="width: 50px;">Rank</th>
+                        <th class="text-left">Athlete</th>
+                        <th>Race 1</th>
+                        <th>Race 2</th>
+                        <th>Race 3</th>
+                        <th>Race 4</th>
+                        <th style="width: 60px;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${filteredStandings.map((s, i) => {
         const rank = i + 1;
-        let rankClass = '';
-        let medalEmoji = '';
-        if (rank === 1) { rankClass = 'rank-1'; medalEmoji = '🥇'; }
-        if (rank === 2) { rankClass = 'rank-2'; medalEmoji = '🥈'; }
-        if (rank === 3) { rankClass = 'rank-3'; medalEmoji = '🥉'; }
+        let badgeClass = 'rank-badge-common';
+        let content = rank;
+
+        if (rank === 1) { badgeClass = 'rank-badge rank-badge-1'; }
+        else if (rank === 2) { badgeClass = 'rank-badge rank-badge-2'; }
+        else if (rank === 3) { badgeClass = 'rank-badge rank-badge-3'; }
+        else { badgeClass = 'rank-badge-common'; }
+
+        const getCell = (rNum) => {
+            const val = s.races[rNum];
+            const isDropped = s.droppedRaces && s.droppedRaces.includes(rNum);
+
+            if (!val && val !== 0) return `<td style="color:#ddd;">-</td>`;
+            if (isDropped) return `<td style="color:#ccc; text-decoration: line-through; font-size:12px;">${val}</td>`;
+            return `<td style="color:#333; font-weight:600;">${val}</td>`;
+        };
+
         return `
                     <tr>
-                        <td class="${rankClass}">${medalEmoji}${rank}</td>
+                        <td><div class="${badgeClass}">${content}</div></td>
                         <td class="name">${s.name}</td>
-                        <td>${s.races[1] || '-'}</td>
-                        <td>${s.races[2] || '-'}</td>
-                        <td>${s.races[3] || '-'}</td>
-                        <td>${s.races[4] || '-'}</td>
+                        ${getCell(1)}
+                        ${getCell(2)}
+                        ${getCell(3)}
+                        ${getCell(4)}
                         <td class="total">${s.total}</td>
                     </tr>`;
     }).join('')}
                 </tbody>
             </table>
+            
             <div class="footer">
-                <div class="footer-note">Generated on ${new Date().toLocaleDateString()} | Unofficial Results</div>
-                <div class="footer-brand">Powered by <a href="https://saltygoldsupply.com" style="color: #D4AF37; text-decoration: underline;">saltygoldsupply.com</a></div>
+                <div>* Lowest score dropped if 4 races completed</div>
+                <div>${new Date().toLocaleDateString()} • <a href="https://www.saltygoldsupply.com" style="color:#666; text-decoration:none;">www.saltygoldsupply.com</a></div>
             </div>
         </body>
         </html>
@@ -2300,4 +2361,49 @@ function updateBranding() {
 
     const igFooter = document.querySelector('.ig-footer p');
     if (igFooter) igFooter.innerText = getBranding('TRACKER_TITLE').toUpperCase();
+}
+
+// =============================================================================
+// ADMIN MODE
+// =============================================================================
+function checkAdminStatus() {
+    const isAdmin = localStorage.getItem('salty_admin_access') === 'true';
+    const adminElements = document.querySelectorAll('.admin-only');
+
+    adminElements.forEach(el => {
+        if (isAdmin) {
+            if (el.classList.contains('nav-tab')) el.style.display = 'inline-block';
+            else el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    });
+
+    const loginBtn = document.getElementById('admin-login-btn');
+    if (loginBtn) {
+        loginBtn.innerHTML = isAdmin ? '🔓 Admin Active' : '🔒 Admin';
+        loginBtn.style.color = isAdmin ? '#4CAF50' : '#666';
+        if (isAdmin) loginBtn.title = "Click to Logout";
+    }
+}
+
+function toggleAdminMode() {
+    const isAdmin = localStorage.getItem('salty_admin_access') === 'true';
+
+    if (isAdmin) {
+        if (confirm('Log out of Admin Mode?')) {
+            localStorage.removeItem('salty_admin_access');
+            location.reload();
+        }
+    } else {
+        const password = prompt("Enter Admin Password:");
+        if (password === 'gold2026') {
+            localStorage.setItem('salty_admin_access', 'true');
+            showToast('Admin Mode Unlocked! 🔓');
+            checkAdminStatus();
+            setTimeout(() => location.reload(), 500);
+        } else if (password) {
+            alert('Incorrect Password');
+        }
+    }
 }
