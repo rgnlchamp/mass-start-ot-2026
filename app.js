@@ -1847,7 +1847,7 @@ function shareMsStandingsPdf() {
     showToast('PDF ready to print/save 📄');
 }
 
-// Show Skaters to Watch modal
+// Show Skaters to Watch modal - Instagram-style design
 function showSkatersToWatch(gender, dist) {
     const data = SKATERS_TO_WATCH[gender]?.[dist];
     if (!data) {
@@ -1855,97 +1855,100 @@ function showSkatersToWatch(gender, dist) {
         return;
     }
 
-    const genderLabel = gender === 'women' ? "Women's" : "Men's";
-    const distLabel = dist === 'mass_start' ? 'Mass Start' : dist === 'team_pursuit' ? 'Team Pursuit' : dist;
+    const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
+    const distLabel = dist === 'mass_start' ? 'MASS START' : dist === 'team_pursuit' ? 'TEAM PURSUIT' : dist.toUpperCase();
 
-    let content = '';
-    if (data.note) {
-        content = `<p style="text-align: center; color: #D4AF37; font-style: italic; padding: 20px;">${data.note}</p>`;
-    } else {
-        content = `
-            <table class="data-table" style="width:100%;">
-                <thead>
-                    <tr>
-                        <th style="width:40px;">#</th>
-                        <th>Athlete</th>
-                        <th style="width:80px;">SB</th>
-                        <th style="width:50px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.skaters.map(s => `
-                        <tr>
-                            <td>${s.rank}</td>
-                            <td style="font-weight:bold;">
-                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ↗</a>` : s.name}
-                            </td>
-                            <td><strong>${s.time}</strong></td>
-                            <td>${s.notes ? '<span style="color:#D4AF37; font-size:11px;">' + s.notes + '</span>' : ''}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <p style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
-                Season Bests 2025-26 | Source: speedskatingresults.com
-            </p>
-        `;
-    }
-
-    // Create modal
+    // Create modal with Instagram-style design
     const modal = document.createElement('div');
     modal.id = 'skaters-modal';
     modal.style.cssText = `
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.8); z-index: 10000;
+        background: rgba(0,0,0,0.95); z-index: 10000;
         display: flex; align-items: center; justify-content: center;
+        font-family: 'Outfit', 'Segoe UI', sans-serif;
     `;
 
-    // Add Download Button to header
-    modal.innerHTML = `
-        <div style="background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #D4AF37; font-size: 1.1rem;">👀 ${genderLabel} ${distLabel}</h3>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    ${!data.note ? `<button onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.8rem; padding: 4px 10px;">📸 Insta Post</button>` : ''}
-                    <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+    if (data.note) {
+        modal.innerHTML = `
+            <div style="background: #000; border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; max-width: 500px; width: 90%; padding: 40px; text-align: center;">
+                <h2 style="color: #D4AF37; margin-bottom: 15px;">${genderLabel} ${distLabel}</h2>
+                <p style="color: #888; margin-bottom: 20px;">${data.note}</p>
+                <button onclick="document.getElementById('skaters-modal').remove()" class="btn btn-primary">Close</button>
+            </div>
+        `;
+    } else {
+        modal.innerHTML = `
+            <div style="background: radial-gradient(circle at 50% 0%, #1a1a1a, #000000 90%); max-width: 520px; width: 95%; box-shadow: 0 0 80px rgba(0,0,0,1); padding: 26px 32px;">
+                
+                <!-- Header with branding -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                    <div style="display: flex;">
+                        <!-- Gold vertical accent line with glow -->
+                        <div style="width: 3px; background: #C9A227; margin-right: 14px; margin-top: 4px; align-self: stretch; box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);"></div>
+                        <div>
+                            <div style="font-size: 12px; letter-spacing: 5px; color: #C9A227; text-transform: uppercase; font-weight: 400; margin-bottom: 0; text-shadow: 0 0 8px rgba(201, 162, 39, 0.3);">2026 TRIALS</div>
+                            <h1 style="font-size: 42px; margin: 0; text-transform: uppercase; font-weight: 900; line-height: 0.95; letter-spacing: -1px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                                <span style="color: #fff;">${genderLabel}</span><br><span style="color: #C9A227; text-shadow: 0 0 15px rgba(201, 162, 39, 0.4);">${distLabel}</span>
+                            </h1>
+                        </div>
+                    </div>
+                    <div style="text-align: right; padding-top: 2px;">
+                        <div style="font-size: 13px; font-weight: 800; letter-spacing: 1px; text-shadow: 0 0 8px rgba(201, 162, 39, 0.3);">
+                            <span style="color: #fff;">SALTY</span> <span style="color: #C9A227;">GOLD</span>
+                        </div>
+                        <div style="font-size: 9px; font-weight: 600; color: #666; letter-spacing: 0.5px;">SUPPLY</div>
+                        <button onclick="document.getElementById('skaters-modal').remove()" style="background: none; border: none; color: #444; font-size: 22px; cursor: pointer; line-height: 1; margin-top: 6px;">&times;</button>
+                    </div>
+                </div>
+                
+                <!-- Subtitle with fading gold line -->
+                <div style="margin-top: 10px; position: relative;">
+                    <div style="font-size: 14px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 8px rgba(255,255,255,0.1); margin-bottom: 8px;">
+                        SKATERS TO WATCH <span style="color: #C9A227;">//</span> 2026 SEASON BESTS
+                    </div>
+                    <div style="height: 2px; background: linear-gradient(90deg, #C9A227, transparent); width: 100%; box-shadow: 0 0 8px rgba(201, 162, 39, 0.5);"></div>
+                </div>
+
+                <!-- Column Headers -->
+                <div style="display: flex; justify-content: space-between; padding: 12px 0 6px 0; color: #888; font-size: 10px; text-transform: uppercase; font-weight: 600; letter-spacing: 1.5px;">
+                    <div><span style="margin-right: 26px;">RANK</span><span>ATHLETE</span></div>
+                    <span>PERFORMANCE</span>
+                </div>
+
+                <!-- Athletes List -->
+                <div style="display: flex; flex-direction: column;">
+                    ${data.skaters.map((s, i) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 11px 0 ${i < 3 ? '11px 10px' : ''}; margin: 0 ${i < 3 ? '-10px' : '0'}; border-bottom: 1px solid rgba(255,255,255,0.04); ${i < 3 ? `background: linear-gradient(90deg, ${i === 0 ? 'rgba(201,162,39,0.2)' : 'rgba(201,162,39,0.1)'}, transparent); border-left: 3px solid #C9A227;` : ''}">
+                            <div style="display: flex; align-items: center;">
+                                <span style="width: 36px; font-size: 18px; font-weight: 900; color: #C9A227; font-style: italic; text-shadow: 0 0 10px rgba(201, 162, 39, 0.4);">${s.rank}</span>
+                                <span style="font-size: 15px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0; text-shadow: 0 0 8px rgba(0,0,0,0.5);">${s.name}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                ${s.notes ? `<span style="background: #C9A227; color: #000; font-size: 8px; padding: 3px 6px; border-radius: 3px; font-weight: 900; box-shadow: 0 0 8px rgba(201,162,39,0.4); border: 1px solid #ffe680;">${s.notes}</span>` : ''}
+                                <span style="font-size: 18px; font-weight: 700; font-family: 'Courier New', monospace; color: #fff; letter-spacing: 0.5px; text-shadow: 0 0 4px rgba(255,255,255,0.2);">${s.time}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Footer -->
+                <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 15px; font-weight: 900; letter-spacing: 0; text-shadow: 0 0 8px rgba(255,255,255,0.1);">
+                        <span style="color: #fff;">@SALTY</span><span style="color: #C9A227; text-shadow: 0 0 10px rgba(201, 162, 39, 0.4);">GOLD</span><span style="color: #fff;">SUPPLY</span>
+                    </div>
+                    <div style="font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">SALTYGOLDSUPPLY.COM</div>
+                </div>
+
+                <!-- Download Button -->
+                <div style="margin-top: 12px; text-align: center;">
+                    <button onclick="downloadSkatersImage('${gender}', '${dist}')" class="btn" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 12px; padding: 8px 20px; border-radius: 5px; font-weight: 700; cursor: pointer;">
+                        📸 CREATE INSTA POST
+                    </button>
                 </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                 <h4 style="margin: 0; color: #888; font-weight: normal; font-size: 0.9rem;">Skaters to Watch</h4>
-            </div>
-           
-            <style>
-                #skaters-modal .data-table td, #skaters-modal .data-table th { padding: 6px 8px; font-size: 0.9rem; }
-                #skaters-modal .data-table tr:last-child td { border-bottom: none; }
-            </style>
-            
-            <table class="data-table" style="width:100%;">
-                <thead>
-                    <tr>
-                        <th style="width:40px;">#</th>
-                        <th>Athlete</th>
-                        <th style="width:100px;">SEASON BEST</th>
-                        <th style="width:50px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.skaters.map(s => `
-                        <tr>
-                            <td>${s.rank}</td>
-                            <td style="font-weight:bold;">
-                                ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color:#D4AF37; text-decoration:none;">${s.name} ↗</a>` : s.name}
-                            </td>
-                            <td><strong>${s.time}</strong></td>
-                            <td>${s.notes ? '<span style="color:#D4AF37; font-size:11px;">' + s.notes + '</span>' : ''}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <p style="text-align:center; margin-top:10px; font-size:12px; color:#888;">
-                Season Bests 2025-26 | Source: speedskatingresults.com
-            </p>
-        </div>
-    `;
+        `;
+    }
+
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     document.body.appendChild(modal);
 }
@@ -1957,84 +1960,114 @@ function downloadSkatersImage(gender, dist) {
     const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
     const distLabel = dist === 'team_pursuit' ? 'TEAM PURSUIT' : dist.toUpperCase();
 
-    // Create a container specifically for the image capture (off-screen but visible to html2canvas)
+    // Create Instagram-sized container (1080x1350 - 4:5 ratio)
     const exportContainer = document.createElement('div');
     exportContainer.style.cssText = `
-        position: fixed; top: 0; left: 0;
-        width: 1080px; height: 1350px; /* Instagram Portrait 4:5 */
-        background: radial-gradient(circle at top, #1a1a2e, #000);
-        color: white; font-family: 'Segoe UI', sans-serif;
-        padding: 60px; box-sizing: border-box;
-        z-index: -1; display: flex; flex-direction: column;
+        position: fixed; top: 0; left: -9999px;
+        width: 1080px; height: 1350px;
+        background: #000;
+        color: white; font-family: 'Outfit', 'Segoe UI', sans-serif;
+        padding: 0; box-sizing: border-box;
+        z-index: -9999; display: flex; flex-direction: column;
     `;
 
     exportContainer.innerHTML = `
-        <div style="text-align: center; border-bottom: 4px solid #D4AF37; padding-bottom: 25px; margin-bottom: 30px;">
-            <div style="font-size: 32px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">${getBranding('MASS_START_TITLE')}</div>
-            <h1 style="font-size: 90px; margin: 5px 0 10px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>${distLabel}</h1>
-            <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
-                <div style="background: #D4AF37; color: #000; padding: 5px 20px; font-weight: bold; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;">Skaters to Watch</div>
-                <div style="color: #D4AF37; font-size: 22px; text-transform: uppercase; letter-spacing: 2px; border: 1px solid #D4AF37; padding: 4px 20px;">Season Bests</div>
+        <div style="padding: 30px 50px 25px 50px; display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; background: radial-gradient(circle at 50% 0%, #1a1a1a, #000000 80%);">
+            
+            <!-- Header -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="display: flex;">
+                        <!-- Gold vertical accent line with glow -->
+                        <div style="width: 5px; background: #C9A227; margin-right: 25px; margin-top: 5px; align-self: stretch; box-shadow: 0 0 15px rgba(201, 162, 39, 0.5);"></div>
+                        <div>
+                            <div style="font-size: 18px; letter-spacing: 5px; color: #C9A227; text-transform: uppercase; font-weight: 400; margin-bottom: 0; text-shadow: 0 0 10px rgba(201, 162, 39, 0.3);">2026 TRIALS</div>
+                            <h1 style="font-size: 90px; margin: 0; text-transform: uppercase; font-weight: 900; line-height: 0.92; letter-spacing: -2px; text-shadow: 0 0 30px rgba(0,0,0,0.5);">
+                                <span style="color: #fff;">${genderLabel}</span><br><span style="color: #C9A227; text-shadow: 0 0 20px rgba(201, 162, 39, 0.4);">${distLabel}</span>
+                            </h1>
+                        </div>
+                    </div>
+                    <div style="text-align: right; padding-top: 5px;">
+                        <div style="font-size: 20px; font-weight: 800; letter-spacing: 2px; text-shadow: 0 0 10px rgba(201, 162, 39, 0.3);">
+                            <span style="color: #fff;">SALTY</span> <span style="color: #C9A227;">GOLD</span>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 600; color: #666; letter-spacing: 1px;">SUPPLY</div>
+                    </div>
+                </div>
+                
+                <!-- Subtitle with fading gold line -->
+                <div style="margin-top: 15px; position: relative;">
+                    <div style="font-size: 24px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 4px; text-shadow: 0 0 10px rgba(255,255,255,0.1); margin-bottom: 10px;">
+                        SKATERS TO WATCH <span style="color: #C9A227;">//</span> 2026 SEASON BESTS
+                    </div>
+                    <div style="height: 2px; background: linear-gradient(90deg, #C9A227, transparent); width: 100%; box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);"></div>
+                </div>
+
+                <!-- Column Headers -->
+                <div style="display: flex; justify-content: space-between; padding: 15px 0 10px 0; color: #888; font-size: 15px; text-transform: uppercase; font-weight: 600; letter-spacing: 2px; margin-top: 10px;">
+                    <div><span style="margin-right: 30px;">RANK</span><span>ATHLETE</span></div>
+                    <span>PERFORMANCE</span>
+                </div>
+
+                <!-- Athletes List -->
+                <div style="display: flex; flex-direction: column;">
+                    ${data.skaters.slice(0, 10).map((s, i) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px ${i < 3 ? '15px' : '0'}; margin: 0 ${i < 3 ? '-15px' : '0'}; border-bottom: 1px solid rgba(255,255,255,0.06); ${i < 3 ? `background: linear-gradient(90deg, ${i === 0 ? 'rgba(201,162,39,0.2)' : 'rgba(201,162,39,0.1)'}, transparent); border-left: 4px solid #C9A227;` : ''}">
+                            <div style="display: flex; align-items: center;">
+                                <span style="width: 70px; font-size: 36px; font-weight: 900; color: #C9A227; font-style: italic; text-shadow: 0 0 20px rgba(201, 162, 39, 0.6);">${s.rank}</span>
+                                <span style="font-size: 32px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0; text-shadow: 0 0 10px rgba(0,0,0,0.5);">${s.name}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                ${s.notes ? `<span style="background: #C9A227; color: #000; font-size: 15px; padding: 6px 10px; border-radius: 4px; font-weight: 900; box-shadow: 0 0 15px rgba(201,162,39,0.6); border: 1px solid #ffe680;">${s.notes}</span>` : ''}
+                                <span style="font-size: 38px; font-weight: 700; font-family: 'Courier New', monospace; color: #fff; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,255,0.3);">${s.time}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
-        </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
-                ${data.skaters.slice(0, 10).map((s, i) => `
-                    <tr style="background: rgba(255,255,255,0.05); font-size: 28px;">
-                        <td style="padding: 10px 25px; font-weight: 900; color: #D4AF37; width: 60px;">${s.rank}</td>
-                        <td style="padding: 10px; font-weight: 600;">${s.name.toUpperCase()}</td>
-                        <td style="padding: 10px 25px; text-align: right; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${s.time}</td>
-                        <td style="padding: 10px 25px 10px 0; width: 100px; text-align: right;">
-                            ${s.notes ? `<span style="background: #D4AF37; color: #000; font-size: 16px; padding: 4px 10px; border-radius: 4px; font-weight: bold; white-space: nowrap; display: inline-block;">${s.notes}</span>` : ''}
-                        </td>
-                    </tr>
-                `).join('')}
-            </table>
+            <!--Footer -->
+        <div style="padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 26px; font-weight: 900; letter-spacing: 0; text-shadow: 0 0 10px rgba(255,255,255,0.1);">
+                <span style="color: #fff;">@SALTY</span><span style="color: #C9A227; text-shadow: 0 0 15px rgba(201, 162, 39, 0.4);">GOLD</span><span style="color: #fff;">SUPPLY</span>
+            </div>
+            <div style="font-size: 15px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">SALTYGOLDSUPPLY.COM</div>
         </div>
-
-        <div style="text-align: center; margin-top: auto; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-size: 42px; font-weight: 900; color: #D4AF37; letter-spacing: 1px;">@SALTYGOLDSUPPLY</div>
-            <div style="font-size: 20px; color: #888; margin-top: 5px; letter-spacing: 3px; font-weight: 300;">WWW.SALTYGOLDSUPPLY.COM</div>
-        </div>
-    `;
+        </div >
+        `;
 
     document.body.appendChild(exportContainer);
     showToast('Generating high-res graphic... 🎨');
 
     html2canvas(exportContainer, {
-        scale: 1, // Already set to high res dimensions
+        scale: 1,
         useCORS: true,
-        backgroundColor: '#000'
+        backgroundColor: '#000',
+        logging: false
     }).then(canvas => {
-        // Remove container immediately
         document.body.removeChild(exportContainer);
 
         canvas.toBlob(blob => {
-            const fileName = `SkatersToWatch_${gender}_${dist}.png`;
+            const fileName = `SaltyGold_${genderLabel}_${distLabel.replace(/\s+/g, '')}.png`;
             const file = new File([blob], fileName, { type: 'image/png' });
 
-            // Detect Mobile Device (Simple check)
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-            // SMART SHARE: Only use native sharing on Mobile
             if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
                     files: [file],
                     title: 'Skaters to Watch',
-                    text: `Check out the Season Bests for the ${getBranding('SHORT_EVENT_NAME')}! 🇺🇸⛸️`
+                    text: `Check out the Season Bests for the 2026 Olympic Trials! 🇺🇸⛸️ #OlympicTrials2026`
                 })
                     .then(() => showToast('Shared successfully! 🚀'))
                     .catch((error) => {
                         console.log('Error sharing:', error);
-                        // Fallback if user cancels or share fails
                         saveAsFile(blob, fileName);
                     });
             } else {
-                // DESKTOP: Always Download
                 saveAsFile(blob, fileName);
             }
-        });
+        }, 'image/png');
     }).catch(err => {
         console.error(err);
         showToast('Error generating image');
@@ -2099,7 +2132,7 @@ function openShareModal(athleteName) {
         let label = e;
         if (e === 'TpSpec') label = 'Team Pursuit';
         if (e === 'mass_start') label = 'Mass Start';
-        return `<span>${label}</span>`;
+        return `< span > ${label}</span > `;
     }).join('');
 
     document.getElementById('share-overlay').style.display = 'flex';
@@ -2132,7 +2165,7 @@ function downloadShareCard() {
                 navigator.share({
                     files: [file],
                     title: `${getBranding('TEAM_NAME')} Qualifier 🇺🇸`,
-                    text: `Officially Qualified! ${getBranding('HASHTAG')}`
+                    text: `Officially Qualified! ${getBranding('HASHTAG')} `
                 })
                     .then(() => {
                         btn.innerText = 'Shared! 🚀';
@@ -2210,21 +2243,21 @@ function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.style.cssText = `
-        background: rgba(40, 167, 69, 0.9);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        margin-top: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        backdrop-filter: blur(5px);
-        font-weight: 500;
-        transform: translateX(100%);
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        display: flex;
-        align-items: center;
-        gap: 10px;
+    background: rgba(40, 167, 69, 0.9);
+    color: white;
+    padding: 12px 24px;
+    border - radius: 8px;
+    margin - top: 10px;
+    box - shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop - filter: blur(5px);
+    font - weight: 500;
+    transform: translateX(100 %);
+    transition: transform 0.3s cubic - bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align - items: center;
+    gap: 10px;
     `;
-    toast.innerHTML = `<span>${message}</span>`;
+    toast.innerHTML = `< span > ${message}</span > `;
 
     container.appendChild(toast);
 
