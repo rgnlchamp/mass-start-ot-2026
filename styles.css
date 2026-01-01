@@ -1445,3 +1445,100 @@ body.admin-mode .admin-only {
         box-shadow: 0 0 5px #ff4444;
     }
 }
+
+/* THEMED BUTTONS & TABS */
+.segment-group {
+    display: inline-flex;
+    background: #222;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #444;
+}
+
+.btn-segment {
+    background: transparent;
+    border: none;
+    color: #999;
+    padding: 6px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-segment:hover {
+    color: #fff;
+}
+
+.btn-segment.active {
+    background: #000;
+    color: #D4AF37;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+}
+
+.btn-tab {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #aaa;
+    border-radius: 12px;
+    padding: 8px 24px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.btn-tab:hover {
+    border-color: #D4AF37;
+    color: #D4AF37;
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.btn-tab.active {
+    background: #D4AF37;
+    color: #000;
+    border-color: #D4AF37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+    transform: translateY(-1px);
+}
+
+/* PULSE ANIMATION FOR EYE ICON */
+@keyframes pulse-gold {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7);
+    }
+
+    70% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+    }
+}
+
+.pulse-eye {
+    animation: pulse-gold 2s infinite;
+    background: #D4AF37 !important;
+    color: #000 !important;
+    border: none !important;
+    font-size: 1.2em !important;
+    padding: 2px 7px !important;
+    line-height: 1;
+    border-radius: 5px !important;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 5px;
+}
+
+.pulse-eye:hover {
+    transform: scale(1.25);
+    animation: none;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.9);
+}
+}

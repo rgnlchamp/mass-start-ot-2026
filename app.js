@@ -390,6 +390,16 @@ function renderOlympicTeamTracker() {
 
             <div class="card">
                 <h3>Distance Breakdown & Quota Tracking</h3>
+                <div style="display:flex; gap:15px; margin-bottom:15px; color:#aaa; font-size: 0.8rem; flex-wrap: wrap;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="background:#dc3545; color:#fff; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">Direct</span>
+                        <span>= Qual'd via World Cup (Protected)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="background:#0d6efd; color:#fff; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">O. Trials</span>
+                        <span>= Spot earned at Trials</span>
+                    </div>
+                </div>
                 ${renderDistanceBreakdown(gender)}
             </div>
         `;
@@ -588,7 +598,7 @@ function renderDistanceBreakdown(gender) {
                      <h4 style="margin:0 0 5px 0; border-bottom:2px solid #eee; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                         <span>${dist}</span>
                         <span style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn btn-sm" onclick="showSkatersToWatch('${gender}', '${dist}')" style="background:#337ab7; padding:2px 6px; font-size:11px;" title="Skaters to Watch">👀</button>
+                            <button class="pulse-eye" onclick="showSkatersToWatch('${gender}', '${dist}')" title="Skaters to Watch - Click to Share!">👀</button>
                             <span>Quota: ${config.quota}</span>
                         </span>
                     </h4>
@@ -1341,33 +1351,70 @@ function renderRules() {
 // =============================================================================
 function renderMassStartStandings() {
     const gender = appState.viewGender;
+    const availableDistances = gender === 'women'
+        ? ['mass_start', '500m', '1000m', '1500m', '3000m']
+        : ['mass_start', '500m', '1000m', '1500m', '5000m'];
+
+    // Default to mass_start if current viewDistance is not valid for gender
+    if (!availableDistances.includes(appState.viewDistance)) {
+        appState.viewDistance = 'mass_start';
+    }
+    const viewDist = appState.viewDistance;
+
+    let html = `
+        <div class="section-header" style="flex-direction: column; align-items: flex-start; gap: 15px;">
+            <div style="display:flex; justify-content:space-between; width:100%; flex-wrap: wrap; gap: 10px;">
+                <div class="segment-group">
+                    <button class="btn-segment ${gender === 'women' ? 'active' : ''}" 
+                        onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
+                    <button class="btn-segment ${gender === 'men' ? 'active' : ''}" 
+                        onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
+                </div>
+            </div>
+
+            <div class="tabs-sub" style="display:flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 5px;">
+                 ${availableDistances.map(d => `
+                     <button class="btn-tab ${viewDist === d ? 'active' : ''}"
+                         onclick="appState.viewDistance='${d}'; renderCurrentTab()"
+                         style="text-transform: capitalize;">
+                         ${d.replace('_', ' ')}
+                     </button>
+                 `).join('')}
+            </div>
+            
+            <h2 style="margin-top: 10px;">🏆 ${viewDist === 'mass_start' ? 'Mass Start Series' : viewDist} Standings</h2>
+        </div>
+    `;
+
+    if (viewDist === 'mass_start') {
+        html += renderMassStartTable(gender);
+    } else {
+        html += renderDistanceTable(gender, viewDist);
+    }
+
+    return html;
+}
+
+function renderMassStartTable(gender) {
     const standings = calculateMassStartStandings(gender);
-
-    // Filter out athletes with 0 points
-    const filteredStandings = standings.filter(s => s.total > 0);
-
-    // Get pre-nominated athletes for this gender's mass start
+    const filteredStandings = standings.filter(s => s.total > 0 || (s.droppedRaces && s.droppedRaces.length > 0)); // Show if they have points
     const preNominated = OLYMPIC_CONFIG[gender].mass_start?.preNominated || [];
 
     return `
-        <div class="section-header" style="flex-direction: row;">
-            <div class="btn-group" style="margin-right: 20px;">
-                <button class="btn ${gender === 'women' ? 'btn-primary' : 'btn-outline-primary'}" 
-                    onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
-                <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
-                    onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
-            </div>
-            <div class="btn-group" style="margin-right: 20px;">
-                <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 6px 14px; margin-right: 8px;">📸 Insta Post</button>
-                <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #333; color:white; border:1px solid #555; font-size: 0.9rem; padding: 6px 14px;">📄 PDF</button>
-            </div>
-            <h2>🏆 Mass Start Series Standings</h2>
-        </div>
-
         <div class="card" id="ms-standings-card">
-            <h3 style="margin-top:0;">${gender === 'women' ? "Women's" : "Men's"} Overall Points</h3>
-            <p class="text-muted">Accumulated points from Races 1-4. (Official selection uses Best 3 of 4).</p>
-            
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:15px;">
+                <div>
+                    <h3 style="margin-top:0;">${gender === 'women' ? "Women's" : "Men's"} Overall Points</h3>
+                    <p class="text-muted" style="margin-bottom:0;">Accumulated points from Races 1-4. (Official selection uses Best 3 of 4).</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 8px 16px; font-weight:700; box-shadow: 0 4px 15px rgba(220, 39, 67, 0.4);">📸 Insta Post</button>
+                    <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
+                        PDF
+                    </button>
+                </div>
+            </div>
             <div class="table-container">
                 <table class="data-table">
                     <thead>
@@ -1388,24 +1435,88 @@ function renderMassStartStandings() {
         if (rank === 1) rankClass = 'rank-1';
         if (rank === 2) rankClass = 'rank-2';
         if (rank === 3) rankClass = 'rank-3';
-
         const isQualified = preNominated.includes(s.name);
 
+        const getCell = (rNum) => {
+            const val = s.races[rNum];
+            const isDropped = s.droppedRaces && s.droppedRaces.includes(rNum);
+            if (!val && val !== 0) return `<td class="text-center" style="color:#555;">-</td>`;
+            if (isDropped) return `<td class="text-center" style="color:#666; text-decoration: line-through; font-size: 0.9em;">${val}</td>`;
+            return `<td class="text-center" style="color:#fff;">${val}</td>`;
+        };
+
         return `
-                            <tr>
-                                <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${rank}</td>
-                                <td>
-                                    <strong>${s.name}</strong>
-                                    ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">✅ Pre-Qualified</span>' : ''}
-                                </td>
-                                <td class="text-center">${s.races[1] || '<span class="text-muted">-</span>'}</td>
-                                <td class="text-center">${s.races[2] || '<span class="text-muted">-</span>'}</td>
-                                <td class="text-center">${s.races[3] || '<span class="text-muted">-</span>'}</td>
-                                <td class="text-center">${s.races[4] || '<span class="text-muted">-</span>'}</td>
-                                <td class="text-center" style="font-weight:bold; font-size:1.1em; color:#D4AF37;">${s.total}</td>
-                            </tr>
+                                <tr>
+                                    <td class="${rankClass}" style="font-weight:bold; font-size:1.1em;">${rank}</td>
+                                    <td>
+                                        <strong>${s.name}</strong>
+                                        ${isQualified ? '<span class="badge" style="background:#28a745; margin-left:8px; font-size:0.7em;">✅ Pre-Qualified</span>' : ''}
+                                    </td>
+                                    ${getCell(1)} ${getCell(2)} ${getCell(3)} ${getCell(4)}
+                                    <td class="text-center" style="font-size:1.2em; font-weight:bold; color:#D4AF37;">${s.total}</td>
+                                </tr>
                             `;
-    }).join('') : '<tr><td colspan="7" class="text-center text-muted">No results recorded yet.</td></tr>'}
+    }).join('') : '<tr><td colspan="7" class="text-center">No results yet.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function renderDistanceTable(gender, dist) {
+    const data = appState.events[gender][dist]?.results || [];
+    // Sort logic handled in edit/save, but ensure sorted for display
+    // For now assume array is objects: { id, name, time, time1, time2, best }
+
+    // Sort by Best Time (asc)
+    const sortedData = [...data].sort((a, b) => {
+        if (!a.best) return 1;
+        if (!b.best) return -1;
+        return a.best.localeCompare(b.best); // Simple string compare for "38.50" vs "38.60" works usually if format consistent. Ideally parse.
+    });
+
+    const is500 = dist === '500m';
+
+    return `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:15px;">
+                <div>
+                    <h3 style="margin:0;">${dist} Results</h3>
+                    <p class="text-muted" style="margin-bottom:0;">${is500 ? 'Ranked by fastest of two races.' : 'Ranked by fastest time.'}</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 8px 16px; font-weight:700; box-shadow: 0 4px 15px rgba(220, 39, 67, 0.4);">📸 Insta Post</button>
+                    <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
+                        PDF
+                    </button>
+                    ${appState.isAdmin ? `<button class="btn btn-sm btn-outline-warning" onclick="openDistanceEdit('${gender}', '${dist}')">✏️ Edit Results</button>` : ''}
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px">Rank</th>
+                            <th>Athlete</th>
+                            ${is500 ? `<th class="text-center">Race 1</th><th class="text-center">Race 2</th>` : ''}
+                            <th class="text-center" style="color:#D4AF37;">${is500 ? 'Best Time' : 'Time'}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedData.length > 0 ? sortedData.map((s, i) => `
+                            <tr>
+                                <td style="font-weight:bold;">${i + 1}</td>
+                                <td>${s.name}</td>
+                                ${is500 ? `
+                                    <td class="text-center" style="color:#aaa;">${s.time1 || '-'}</td>
+                                    <td class="text-center" style="color:#aaa;">${s.time2 || '-'}</td>
+                                ` : ''}
+                                <td class="text-center" style="font-size:1.1em; font-weight:bold; color:#fff;">${s.best || s.time || '-'}</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="5" class="text-center">No results entered.</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -1415,6 +1526,9 @@ function renderMassStartStandings() {
 
 // Share MS Standings as Image (for Instagram - 1080x1350 format)
 function shareMsStandingsImage() {
+    if (typeof shareGenericDistanceImage === 'function' && appState.viewDistance && appState.viewDistance !== 'mass_start') {
+        return shareGenericDistanceImage();
+    }
     const gender = appState.viewGender;
     const standings = calculateMassStartStandings(gender);
     const filteredStandings = standings.filter(s => s.total > 0);
@@ -1439,7 +1553,7 @@ function shareMsStandingsImage() {
             <div style="font-size: 30px; letter-spacing: 4px; color: #888; text-transform: uppercase; font-weight: 300;">${getBranding('MASS_START_TITLE')}</div>
             <h1 style="font-size: 70px; margin: 0 0 5px 0; color: #fff; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 0.9;">${genderLabel}<br>MASS START</h1>
             <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
-                <div style="background: #D4AF37; color: #000; padding: 4px 15px; font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">Current Standings</div>
+                <div style="background: #D4AF37; color: #000; padding: 4px 15px; font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">Unofficial Standings</div>
                 <div style="color: #D4AF37; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; border: 1px solid #D4AF37; padding: 3px 15px;">Top ${displayAthletes.length}</div>
             </div>
         </div>
@@ -1742,6 +1856,9 @@ function downloadSkatersImage(gender, dist) {
 // Share MS Standings as PDF
 
 function shareMsStandingsPdf() {
+    if (typeof shareGenericDistancePdf === 'function' && appState.viewDistance && appState.viewDistance !== 'mass_start') {
+        return shareGenericDistancePdf();
+    }
     const gender = appState.viewGender;
     const standings = calculateMassStartStandings(gender);
     const filteredStandings = standings.filter(s => s.total > 0);
