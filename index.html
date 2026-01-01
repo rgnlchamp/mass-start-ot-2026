@@ -34,6 +34,7 @@
                 <nav class="nav-tabs">
                     <button class="nav-tab active" data-tab="dashboard">🏠 Dashboard</button>
                     <button class="nav-tab admin-only" id="tab-events" data-tab="events">⏱️ Race Entry</button>
+                    <button class="nav-tab admin-only" id="tab-athletes" data-tab="athletes">👥 Athletes</button>
                     <button class="nav-tab" data-tab="results">🏆 Standings</button>
                     <button class="nav-tab" data-tab="help">📖 Rules & Info</button>
                     <button class="nav-tab" onclick="shareApp()">🔗 Share Tracker</button>
@@ -44,7 +45,7 @@
         <div id="modal-container"></div>
         <footer class="footer">
             <div class="footer-controls">
-                <button class="acrs-toggle admin-only" onclick="openAcrsModal()">📊 ACRS Points Table</button>
+
                 <button id="admin-login-btn" class="acrs-toggle" onclick="toggleAdminMode()"
                     style="background:transparent; border:1px solid #444; margin-left:10px;">🔒 Admin</button>
             </div>

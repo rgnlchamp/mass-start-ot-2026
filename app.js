@@ -39,21 +39,37 @@ const SPRINT_POINTS = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeState();
-    setupNavigation();
-    updateBranding();
-    checkAdminStatus();
-    renderCurrentTab();
+    try {
+        initializeState();
+        setupNavigation();
+        updateBranding();
+        checkAdminStatus();
+        renderCurrentTab();
+    } catch (e) {
+        console.error(e);
+        document.body.innerHTML = `
+            <div style="color:red; padding:20px; text-align:center; background:#fff; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <h1>⚠️ Application Error</h1>
+                <p>Something went wrong while loading.</p>
+                <div style="background:#eee; padding:15px; border-radius:5px; text-align:left; font-family:monospace; margin-bottom:20px; max-width:600px; overflow:auto;">
+                    ${e.toString()}<br/>${e.stack}
+                </div>
+                <button onclick="localStorage.clear(); location.reload()" style="padding:15px 30px; background:red; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">⚠️ Factory Reset to Fix</button>
+            </div>
+        `;
+    }
 });
 
 function initializeState() {
     ['women', 'men'].forEach(gender => {
         if (!appState.events[gender]) appState.events[gender] = {};
-        Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
-            if (!appState.events[gender][dist]) {
-                appState.events[gender][dist] = { results: [], status: 'pending' };
-            }
-        });
+        if (typeof OLYMPIC_CONFIG !== 'undefined' && OLYMPIC_CONFIG[gender]) {
+            Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
+                if (!appState.events[gender][dist]) {
+                    appState.events[gender][dist] = { results: [], status: 'pending' };
+                }
+            });
+        }
     });
     loadFromStorage();
 }
@@ -64,7 +80,15 @@ function loadFromStorage() {
         if (saved) {
             const data = JSON.parse(saved);
             appState.athletes = data.athletes || [];
-            appState.msRaces = data.msRaces || appState.msRaces;
+
+            // Robust Merge for Mass Start Races
+            if (data.msRaces) {
+                appState.msRaces = data.msRaces;
+                // Ensure gender keys exist
+                if (!appState.msRaces.women) appState.msRaces.women = { 1: null, 2: null, 3: null, 4: null };
+                if (!appState.msRaces.men) appState.msRaces.men = { 1: null, 2: null, 3: null, 4: null };
+            }
+
             appState.isuConfig = data.isuConfig || {};
 
             if (data.events) {
@@ -94,7 +118,7 @@ function loadFromStorage() {
         // Calculate results for any race that has finishOrder but no results
         ['women', 'men'].forEach(gender => {
             [1, 2, 3, 4].forEach(raceNum => {
-                const race = appState.msRaces[gender][raceNum];
+                const race = appState.msRaces[gender] ? appState.msRaces[gender][raceNum] : null;
                 if (race && race.finishOrder && race.finishOrder.length > 0 && !race.results) {
                     const sprintConfig = SPRINT_POINTS[race.format || 16];
                     race.results = calculateRacePoints(race.finishOrder, race.intermediates || [], sprintConfig);
@@ -179,29 +203,83 @@ function renderDashboard() {
             <h2>Qualification Guide 2026</h2>
         </div>
 
-        <!-- QUALIFICATION GUIDE -->
+        <!-- QUALIFICATION GUIDE - THREE PATHWAYS -->
         <div class="explainer-card" style="border: 2px solid var(--accent-gold); background: rgba(0,0,0,0.4); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                <span class="usa-badge" style="font-size: 0.65rem; padding: 2px 8px; letter-spacing: 1px; height: auto;">USA</span>
-                <span style="color: var(--accent-gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem;">How to Make The Team</span>
+                <span class="usa-badge" style="font-size: 0.75rem; padding: 2px 8px; letter-spacing: 1px; height: auto;">USA</span>
+                <span style="color: var(--accent-gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 0.95rem;">How to Make The Team</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">The process is nuanced, but the goal is simple: Be fast.</p>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 20px;">There are <b style="color:#fff;">three pathways</b> to earn a spot on the 2026 Olympic Team, plus a few rules about quotas.</p>
 
-            <div class="explainer-steps" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 20px;">
-                <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">1. Win</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Finish Top 2 or 3 at Selection</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">Most spots are earned directly by finishing on the podium at the <b>2026 Trials in Milwaukee</b>.</p>
+            <!-- THREE PATHWAYS CARDS -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                
+                <!-- PATHWAY 1: DIRECT NOMINATION -->
+                <div class="card" style="background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(0,0,0,0.3)); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(220, 53, 69, 0.4); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 8px; right: 10px; background: #dc3545; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">PROTECTED</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pathway 1</div>
+                    <h3 style="color: #dc3545; font-size: 1.4rem; margin-bottom: 12px; font-weight: 900;">🏅 Direct Nomination</h3>
+                    <p style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-bottom: 10px;">Pre-Qualified via World Cup</p>
+                    <ul style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; padding-left: 18px; margin: 0;">
+                        <li>Medal at 2025 World Championships <b style="color:#fff;">AND</b> Top 5 at 2 Fall World Cups</li>
+                        <li><b style="color:#fff;">OR</b> Medal at 2 of the 4 Fall World Cups</li>
+                    </ul>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--accent-gold);">
+                        ✓ These athletes are locked in before Trials
+                    </div>
                 </div>
-                <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">2. Rank</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">We Need a "Ticket"</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">The USA only has a set number of spots for each race. Even if you medal here, we need to have an Olympic "ticket" for you to use.</p>
+
+                <!-- PATHWAY 2: OLYMPIC TRIALS -->
+                <div class="card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(0,0,0,0.3)); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(34, 197, 94, 0.4); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 8px; right: 10px; background: #22c55e; color: #000; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">MOST SPOTS</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pathway 2</div>
+                    <h3 style="color: #22c55e; font-size: 1.4rem; margin-bottom: 12px; font-weight: 900;">🏁 Olympic Trials</h3>
+                    <p style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-bottom: 10px;">Earn Your Spot in Milwaukee</p>
+                    <ul style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; padding-left: 18px; margin: 0;">
+                        <li>Finish in <b style="color:#fff;">Top 2-3</b> in your distance at Trials</li>
+                        <li>For Mass Start: Best <b style="color:#fff;">3 of 4</b> races (SLC + Milwaukee)</li>
+                        <li>Must also have a USA quota spot available</li>
+                    </ul>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--accent-gold);">
+                        📅 January 2-5, 2026 in Milwaukee, WI
+                    </div>
                 </div>
-                <div class="card" style="background: rgba(255,255,255,0.03); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color: var(--accent-gold); font-size: 1.6rem; margin-bottom: 15px; font-weight: 900;">3. Survive</h3>
-                    <p style="font-weight: 800; color: #fff; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">The 14 Skater Limit</p>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">We can only take <b>8 Men and 6 Women</b> total. If more people qualify, those with the lowest <b>World Rankings</b> get left home.</p>
+
+                <!-- PATHWAY 3: TEAM PURSUIT SPECIALIST -->
+                <div class="card" style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0,0,0,0.3)); margin-bottom: 0; padding: 1.25rem; border: 1px solid rgba(147, 51, 234, 0.4); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 8px; right: 10px; background: #9333ea; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">DISCRETIONARY</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pathway 3</div>
+                    <h3 style="color: #9333ea; font-size: 1.4rem; margin-bottom: 12px; font-weight: 900;">👥 Team Pursuit Specialist</h3>
+                    <p style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-bottom: 10px;">Selected by Coaching Staff</p>
+                    <ul style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; padding-left: 18px; margin: 0;">
+                        <li>Max <b style="color:#fff;">2 per gender</b> can be added</li>
+                        <li>For athletes who excel at TP but didn't qualify individually</li>
+                        <li>Based on TP experience, compatibility, and performance</li>
+                    </ul>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--accent-gold);">
+                        ⚡ Announced after Trials (by Jan 8)
+                    </div>
+                </div>
+            </div>
+
+            <!-- THE CATCH: TEAM SIZE LIMIT -->
+            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem 1.25rem; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-size: 1.3rem;">⚠️</span>
+                    <span style="color: var(--accent-gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 0.95rem;">The Catch: Team Size Limit</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                            Even if you qualify, there's a <b style="color:#fff;">14-person cap</b> (<b style="color:#3b82f6;">8 Men</b> + <b style="color:#ec4899;">6 Women</b>). 
+                            If more people qualify than spots available, the <b style="color:#fff;">Reduction Process</b> kicks in.
+                        </p>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 12px; border-left: 3px solid var(--error);">
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;">Reduction Rule</p>
+                        <p style="font-size: 0.95rem; color: #fff; margin: 0; line-height: 1.5;">Athlete with the <b>lowest World Ranking (SOQC)</b> in their qualifying event is cut first.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -270,9 +348,18 @@ function renderDashboard() {
                 </div>
             </div>
         </div>
-
         <div class="mt-2">
             ${renderOlympicTeamTracker()}
+        </div>
+
+        <!-- DETAILED QUOTA BREAKDOWN SECTION -->
+        <div class="card mt-2">
+            <h3 style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                <span>📊</span> 
+                <span>Pre-Olympic Trials Detailed Quota & Reduction Breakdown</span>
+            </h3>
+            <p class="text-muted" style="margin-bottom:20px;">View exactly how many spots exist for each distance, who is pre-nominated, and the cut priority order.</p>
+            ${renderQuotaTable(appState.viewGender)}
         </div>
     `;
 }
@@ -283,6 +370,123 @@ function switchToTab(tab) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
     renderCurrentTab();
+}
+
+/**
+ * Jumps to the Race Entry tab and pre-selects the distance for editing
+ */
+function openDistanceEdit(gender, dist) {
+    appState.viewGender = gender;
+    appState.viewDistance = dist;
+    switchToTab('event-entry');
+}
+
+// =============================================================================
+// QUOTA TABLE & REDUCTION MATRIX (Shared Component)
+// =============================================================================
+function renderQuotaTable(gender) {
+    const quotas = OLYMPIC_CONFIG[gender];
+
+    // Helper: Render Reduction Matrix (Chopping Block)
+    const renderReductionMatrix = () => {
+        let allSpots = [];
+        const protectedIndices = gender === 'women'
+            ? { '500m': [0], 'mass_start': [0] }
+            : { '500m': [0], '1000m': [0], '1500m': [0], 'mass_start': [0] };
+
+        Object.entries(quotas).forEach(([dist, q]) => {
+            if (q.soqcRanks && dist !== 'team_pursuit') {
+                q.soqcRanks.forEach((rank, i) => {
+                    const isProtected = protectedIndices[dist] && protectedIndices[dist].includes(i);
+                    if (!isProtected) {
+                        allSpots.push({
+                            distance: dist.replace(/_/g, ' ').toUpperCase(),
+                            spotName: i === 0 ? '1st Spot' : (i === 1 ? '2nd Spot' : '3rd Spot'),
+                            rank: rank
+                        });
+                    }
+                });
+            }
+        });
+
+        allSpots.sort((a, b) => {
+            if (b.rank !== a.rank) return b.rank - a.rank;
+            return a.distance.localeCompare(b.distance);
+        });
+
+        return `
+            <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+                <h5 style="color: #ef4444; margin-bottom: 15px; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.5em">✂️</span> 
+                    <div>
+                        Reduction Order / The "Chopping Block"
+                        <div style="font-size:0.7em; color:#aaa; font-weight:normal;">If Team Size > Cap, spots are cut in this order until we reach <strong>${gender === 'women' ? '6' : '8'} athletes</strong>.</div>
+                    </div>
+                </h5>
+                <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
+                    ${allSpots.map((spot, i) => `
+                        <div style="min-width: 120px; background: ${i === 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; 
+                                    border: 1px solid ${i === 0 ? '#ef4444' : 'rgba(255,255,255,0.1)'}; 
+                                    padding: 10px; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 0.8em; color: #888;">#${i + 1} to Cut</div>
+                            <div style="font-weight: bold; color: ${i === 0 ? '#ef4444' : '#fff'}; margin: 5px 0;">${spot.distance}</div>
+                            <div style="font-size: 0.85em; color: #aaa;">${spot.spotName}</div>
+                            <div style="font-size: 1.2em; font-weight: 900; color: #D4AF37; margin-top: 5px;">${spot.rank}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    };
+
+    return `
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+            <h4 style="text-transform:capitalize; color: #D4AF37; margin:0;">${gender} Results</h4>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table" style="font-size: 0.95em;">
+                <thead style="background: rgba(255,255,255,0.02);">
+                    <tr>
+                        <th style="padding: 12px;">Event</th>
+                        <th style="text-align:center;">Total Spots</th>
+                        <th>Already Qualified</th>
+                        <th style="text-align:center; color:#D4AF37; border-left: 1px solid #333; border-right: 1px solid #333;">Spots available<br>at Trials</th>
+                        <th style="font-size:0.9em; color:#aaa;">Cut Priority (SOQC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(quotas).map(([dist, q]) => {
+        const distName = dist.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const isZero = q.quota === 0;
+        const rowStyle = isZero ? 'opacity: 0.4;' : '';
+        const isTP = dist === 'team_pursuit';
+        const spotsAvailable = isTP ? '<span style="font-size:0.7em; letter-spacing:1px; text-transform:uppercase;">Discretionary</span>' : q.trialsSpots;
+
+        return `
+                            <tr style="${rowStyle}">
+                                <td style="font-weight:bold; padding: 12px;">${distName}</td>
+                                <td style="text-align:center; font-size: 1.1em;">${q.quota}</td>
+                                <td>${isTP
+                ? '<span style="color:#666;">-</span>'
+                : (q.preNominated.length ? q.preNominated.map(name => {
+                    return `<span class="badge" style="background:#22c55e; color:black; margin-right:5px;">${name} ✓</span>`;
+                }).join(' ') : '<span style="color:#666;">-</span>')
+            }</td>
+                                <td style="text-align:center; font-weight:900; color:#D4AF37; font-size: 1.2em; border-left: 1px solid #333; border-right: 1px solid #333; background: rgba(212, 175, 55, 0.05);">
+                                    ${spotsAvailable}
+                                </td>
+                                <td style="color:#fff; font-family:monospace; font-size:1.4em; font-weight:bold;">
+                                    ${isTP ? `<span class="badge" style="background:#22c55e; color:black;">2x Specialists (If Needed)</span>` : (q.soqcRanks ? q.soqcRanks.join(', ') : '-')}
+                                </td>
+                            </tr>
+                        `;
+    }).join('')}
+                </tbody>
+            </table>
+            ${renderReductionMatrix()}
+        </div>
+    `;
 }
 
 
@@ -355,7 +559,7 @@ function renderOlympicTeamTracker() {
                         ${roster.map((t, idx) => {
             const isOverCap = idx >= teamCap;
             const isHighPriority = t.reductionRank > 0 && t.reductionRank <= 10;
-            const isProtected = t.reductionRank === 0 || t.events.includes('TpSpec') || isHighPriority;
+            const isProtected = t.reductionRank === 0 || t.events.includes('TpSpec');
             const isActuallyAtRisk = roster.length > 14 && idx >= 11 && !isProtected;
 
             let displayRank = t.reductionRank === 0 ? 'Protected' : `Priority ${t.reductionRank}`;
@@ -367,15 +571,20 @@ function renderOlympicTeamTracker() {
             let rowClass = "";
             let statusBadge = "";
 
-            if (isOverCap) {
+            if (t.hasPending) {
+                statusBadge = '<span class="status-note" style="color:#f59e0b; font-weight:bold; font-size:0.85em;">Pending Check</span>';
+            } else if (isOverCap) {
                 rowClass = "row-out";
                 statusBadge = '<span class="status-note note-out">Outside Cap</span>';
             } else if (isActuallyAtRisk) {
                 rowClass = "row-vulnerable";
                 statusBadge = '<span class="status-note note-vulnerable">On the Bubble</span>';
             } else {
+
                 rowClass = "row-protected";
-                statusBadge = isProtected ? '<span class="status-note note-protected">Qualified</span>' : '<span class="status-note note-protected">In (Provisional)</span>';
+                // Simplified: Everyone is Qualified, asterisk for non-protected
+                const label = isProtected ? 'Qualified' : 'Qualified*';
+                statusBadge = `<span class="status-note note-protected">${label}</span>`;
             }
 
             return `
@@ -386,9 +595,17 @@ function renderOlympicTeamTracker() {
                                     ${statusBadge}
                                 </td>
                                 <td>${t.events.map(e => `<span class="badge ${e === 'TpSpec' ? 'badge-warn' : ''}">${e === 'TpSpec' ? 'Team Pursuit' : e}</span>`).join(' ')}</td>
-                                <td><strong>${displayRank}</strong></td>
                                 <td>
-                                    ${isOverCap ? '<span style="color:var(--error)">X Cut</span>' : '<span style="color:var(--success)">On Team</span>'}
+                                    <strong>${t.reductionRank === 0 ? 'Protected' : `SOQC Rank #${t.reductionRank}`}</strong>
+                                    ${t.reductionRank !== 0 ? `<div style="font-size:0.75em;color:#aaa;">(Cut #${t.reductionRank})</div>` : ''}
+                                </td>
+                                <td>
+                                    ${isOverCap
+                    ? '<span style="color:#ef4444; font-weight:bold;">Currently Cut</span>'
+                    : (t.hasPending
+                        ? '<span class="badge" style="background:#f59e0b; color:black;">Pending Publish</span>'
+                        : '<span style="color:#22c55e; font-weight:bold;">On Team</span>')
+                }
                                 </td>
                             </tr>
                         `;
@@ -396,6 +613,9 @@ function renderOlympicTeamTracker() {
                         ${roster.length === 0 ? '<tr><td colspan="5" class="text-muted text-center">No athletes qualified yet. Enter results to see projections.</td></tr>' : ''}
                     </tbody>
                 </table>
+                <div style="margin-top:5px; font-size:0.8em; color:#aaa; font-style:italic;">
+                    * Non-protected positions subject to reduction to maintain maximum team size.
+                </div>
                 </div>
             </div>
 
@@ -407,11 +627,21 @@ function renderOlympicTeamTracker() {
                         <span>= Qual'd via World Cup (Protected)</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="background:#0d6efd; color:#fff; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">O. Trials</span>
+                        <span style="background:#22c55e; color:#000; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">Qualified</span>
                         <span>= Spot earned at Trials</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="background:#f59e0b; color:#000; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">Pending</span>
+                        <span>= Results entered but not published</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="background:#337ab7; color:#fff; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">O. Trials</span>
+                        <span>= Spot available via Trials</span>
                     </div>
                 </div>
                 ${renderDistanceBreakdown(gender)}
+                
+
             </div>
         `;
     } catch (e) {
@@ -467,12 +697,15 @@ function calculateReduction(gender) {
                 qualifiers.push({ name: `Team Pursuit Slot ${i + 1}`, ranking: conversion, type: 'TpSpec' });
             }
         } else {
-            // Only include trials results if the event is published
+            // Only include results if published. 
+            // This ensures DRAFT data doesn't leak into the team math.
             const eventData = appState.events[gender][dist];
-            if (eventData.status === 'published') {
+            const isPublished = eventData.status === 'published';
+
+            if (isPublished) {
                 trialsResults = (eventData.results || []).sort((a, b) => a.rank - b.rank);
             } else {
-                trialsResults = []; // Pending results don't affect roster
+                trialsResults = [];
             }
         }
 
@@ -506,7 +739,7 @@ function calculateReduction(gender) {
             if (slotIndex < config.quota) {
                 // They got a spot!
                 const soqc = config.soqcRanks[slotIndex] || 99;
-                qualifiers.push({ name: q.name, ranking: soqc, type: 'Trials' });
+                qualifiers.push({ name: q.name, ranking: soqc, type: 'Trials', isPending: q.isPending });
                 slotIndex++;
             }
         });
@@ -524,6 +757,7 @@ function calculateReduction(gender) {
 
             const p = rosterMap[q.name];
             p.events.push(dist === 'team_pursuit' ? 'TpSpec' : dist);
+            if (q.isPending) p.hasPending = true;
 
             // Check Protection
             // INTERNAL LOGIC: 0 is Protected. Visuals will show 1.
@@ -599,6 +833,11 @@ function renderDistanceBreakdown(gender) {
             });
         }
 
+        // Define distStatus for badge logic
+        const distStatus = (dist !== 'mass_start' && dist !== 'team_pursuit')
+            ? appState.events[gender][dist]?.status
+            : 'published';
+
         // Fillers
         let displayList = [...qualifiers];
         let totalQuota = config.quota;
@@ -621,19 +860,40 @@ function renderDistanceBreakdown(gender) {
                     </h4>
                     <ul style="list-style:none; padding:0; margin:0;">
                          ${displayList.map(s => {
-            let bgColor = '#5cb85c'; // Default green for Trials qualifiers
-            let textColor = '#fff';
-            if (s.type === 'Direct' || s.type === 'Protected') {
-                bgColor = '#d9534f'; textColor = '#fff';
-            } else if (s.type === 'HP Discretion') {
-                bgColor = '#888'; textColor = '#fff';
-            } else if (s.type === 'O. Trials' && s.name === 'Available') {
-                bgColor = '#337ab7'; textColor = '#fff';
+            let bgColor = '#22c55e'; // Default green for Trials qualifiers (FILLED)
+            let textColor = '#black'; // Green background needs dark text for contrast
+
+            // "Available" (Empty) Slots
+            if (s.name === 'Available') {
+                if (s.type === 'O. Trials') {
+                    bgColor = '#337ab7'; textColor = '#fff'; // Blue
+                } else if (s.type === 'HP Discretion') {
+                    bgColor = '#555'; textColor = '#ccc'; // Grey
+                }
+            } else {
+                // FILLED SLOTS
+                if (s.type === 'Direct' || s.type === 'Protected') {
+                    s.type = 'DIRECT'; // Rename for consistency
+                    bgColor = '#ef4444'; textColor = '#fff'; // Red
+                } else if (s.type === 'Trials') {
+                    // Check if this specific event is pending?
+                    // s.name is the athlete. We know the distance context from loop.
+                    // The distStatus variable we added above helps here.
+
+                    if (distStatus !== 'published') {
+                        s.type = 'PENDING';
+                        bgColor = '#f59e0b'; textColor = '#000'; // Orange
+                    } else {
+                        s.type = 'QUALIFIED'; // Rename as requested
+                        bgColor = '#22c55e'; textColor = '#000'; // Green
+                    }
+                }
             }
+
             return `
                             <li style="padding:4px 0; border-bottom:1px dashed #ccc; display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-weight:500">${s.name}</span>
-                                <span class="badge" style="background:${bgColor}; color:${textColor}">${s.type}</span>
+                                <span style="font-weight:500; font-size:1.1em;">${s.name}</span>
+                                <span class="badge" style="background:${bgColor}; color:${textColor}; font-weight:bold; letter-spacing:1px;">${s.type.toUpperCase()}</span>
                             </li>
                         `;
         }).join('')}
@@ -729,13 +989,14 @@ function renderEventEntry() {
                 ? `<button class="btn btn-sm btn-outline-warning" onclick="togglePublishStatus('${gender}', '${dist}')">📝 Unpublish</button>`
                 : `<button class="btn btn-sm btn-success" onclick="togglePublishStatus('${gender}', '${dist}')" ${results.length === 0 ? 'disabled title="Add results first"' : ''}>🚀 Publish to Roster</button>`
             }
+                        <button class="btn btn-sm btn-outline-info" onclick="openIsuImportModal('${gender}', '${dist}')" title="Import from ISU Live Feed">📡 Import</button>
                     </div>
                 </div>
                 
                 ${!isPublished && results.length > 0 ? `
                     <div style="background:rgba(245, 158, 11, 0.1); border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:15px;">
-                        <strong style="color:#f59e0b;">⚠️ Preview Mode:</strong> 
-                        These results are visible in Standings but will NOT appear on the Predicted Team Roster until you click "Publish to Roster".
+                        <strong style="color:#f59e0b;">⚠️ DRAFT MODE:</strong> 
+                        These results are hidden from the public and do NOT affect the Roster until you click "Publish to Roster".
                     </div>
                 ` : ''}
                 
@@ -777,7 +1038,10 @@ function renderEventEntry() {
                                     <td class="text-center">${r.time2 || '-'}</td>
                                     <td class="text-center" style="font-weight:bold; color:#D4AF37;">${r.best || '-'}</td>
                                 ` : !isTP ? `<td>${r.time || '-'}</td>` : ''}
-                                <td><button class="btn btn-sm btn-danger" onclick="removeEventResult(${i})"> Remove</button></td>
+                                 <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="prepareEditEventResult(${i})">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="removeEventResult(${i})"> Remove</button>
+                                </td>
                             </tr>
                         `).join('')}
                         ${results.length === 0 ? `<tr><td colspan="${is500 ? 6 : 4}" class="text-center text-muted">No entries yet.</td></tr>` : ''}
@@ -863,38 +1127,74 @@ function addEventResult() {
 
     const currentResults = appState.events[appState.viewGender][appState.viewDistance].results || [];
 
-    // Check duplicates
-    if (currentResults.some(r => r.name.toLowerCase() === name.toLowerCase())) {
-        alert('Athlete already added to this event.');
-        return;
-    }
+    // Check duplicates / Update
+    const existingIdx = currentResults.findIndex(r => r.name.toLowerCase() === name.toLowerCase());
 
-    // Add Result - different structure for 500m
-    const rank = currentResults.length + 1;
-    const newResult = {
-        id: athlete.id,
-        name: athlete.name,
-        rank: rank
-    };
-
-    if (is500) {
-        newResult.time1 = time1;
-        newResult.time2 = time2;
-        newResult.best = best;
+    if (existingIdx !== -1) {
+        const r = currentResults[existingIdx];
+        if (is500) {
+            if (time1) r.time1 = time1;
+            if (time2) r.time2 = time2;
+            // Recalculate best
+            if (r.time1 && r.time2) r.best = r.time1 < r.time2 ? r.time1 : r.time2;
+            else r.best = r.time1 || r.time2 || r.best;
+        } else if (dist === 'team_pursuit') {
+            // No update
+        } else {
+            r.time = time;
+        }
     } else {
-        newResult.time = time;
-    }
+        // Add New Result
+        const newResult = {
+            id: athlete.id,
+            name: athlete.name,
+            rank: currentResults.length + 1
+        };
 
-    appState.events[appState.viewGender][appState.viewDistance].results.push(newResult);
+        if (is500) {
+            newResult.time1 = time1;
+            newResult.time2 = time2;
+            newResult.best = best;
+        } else if (dist !== 'team_pursuit') {
+            newResult.time = time;
+        }
+
+        currentResults.push(newResult);
+    }
 
     saveToStorage();
     renderCurrentTab();
 
-    // Refocus for next entry
-    setTimeout(() => {
-        const input = document.getElementById('athlete-input');
-        if (input) input.focus();
-    }, 50);
+    // Clear inputs
+    nameInput.value = '';
+    if (is500) {
+        if (document.getElementById('time1-input')) document.getElementById('time1-input').value = '';
+        if (document.getElementById('time2-input')) document.getElementById('time2-input').value = '';
+    } else if (document.getElementById('manual-time')) {
+        document.getElementById('manual-time').value = '';
+    }
+    nameInput.focus();
+}
+
+/**
+ * Pre-fills the entry form with an existing result's data for easy editing
+ */
+function prepareEditEventResult(index) {
+    const r = appState.events[appState.viewGender][appState.viewDistance].results[index];
+    if (!r) return;
+
+    const nameInput = document.getElementById('athlete-input');
+    nameInput.value = r.name;
+
+    const dist = appState.viewDistance;
+    if (dist === '500m') {
+        document.getElementById('time1-input').value = r.time1 || '';
+        document.getElementById('time2-input').value = r.time2 || '';
+    } else if (document.getElementById('manual-time')) {
+        document.getElementById('manual-time').value = r.time || '';
+    }
+
+    nameInput.focus();
 }
 
 function removeEventResult(index) {
@@ -915,29 +1215,20 @@ function togglePublishStatus(gender, dist) {
     const currentStatus = eventData.status;
 
     if (currentStatus === 'published') {
-        // Unpublishing - confirm first
-        if (!confirm(`⚠️ Unpublish ${gender.toUpperCase()} ${dist} results?\n\nThis will REMOVE these results from the Predicted Team Roster until you publish again.`)) {
-            return;
-        }
+        // Unpublishing
+        // Direct unpublish
         eventData.status = 'pending';
-        showToast(`📝 ${gender} ${dist} results unpublished (now in Preview Mode)`);
+        // showToast(`📝 ${gender} ${dist} results unpublished (now in Preview Mode)`);
     } else {
-        // Publishing - confirm the results look correct
-        const resultsCount = eventData.results?.length || 0;
-        if (resultsCount === 0) {
-            alert('Cannot publish: No results entered yet.');
-            return;
-        }
-
-        if (!confirm(`🚀 Publish ${gender.toUpperCase()} ${dist} results?\n\n${resultsCount} athletes will now appear on the Predicted Team Roster.\n\nAre you sure these results are correct?`)) {
-            return;
-        }
+        // Publishing
+        // Direct publish without confirmation to ensure it works
         eventData.status = 'published';
-        showToast(`✅ ${gender} ${dist} results PUBLISHED to Team Roster!`);
+        // showToast is lost on reload, but that's fine
     }
 
     saveToStorage();
-    renderCurrentTab();
+    // Force reload to ensure all charts update with new data status
+    window.location.reload();
 }
 
 function clearMsRace(raceNum, gender) {
@@ -1284,52 +1575,146 @@ function renderAthletes() {
     `;
 }
 
+// =============================================================================
+// DATA MANIPULATION MODALS (Replaces window.prompt/confirm)
+// =============================================================================
+function showCustomModal(title, content, onConfirm, showCancel = true) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h3>${title}</h3>
+                <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
+            </div>
+            <div class="modal-body">
+                ${content}
+            </div>
+            <div class="modal-footer">
+                ${showCancel ? `<button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>` : ''}
+                <button class="btn btn-primary" id="custom-modal-confirm">Confirm</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const confirmBtn = modal.querySelector('#custom-modal-confirm');
+    confirmBtn.onclick = () => {
+        if (onConfirm(modal)) {
+            modal.remove();
+        }
+    };
+
+    // Focus first input if exists
+    const firstInput = modal.querySelector('input, select');
+    if (firstInput) firstInput.focus();
+
+    // Allow Enter key to submit
+    modal.onkeydown = (e) => {
+        if (e.key === 'Enter') confirmBtn.click();
+        if (e.key === 'Escape') modal.remove();
+    };
+}
+
+function openAthleteModal() {
+    const content = `
+        <div class="form-group">
+            <label>Athlete Name</label>
+            <input type="text" id="new-athlete-name" placeholder="First Last" required>
+        </div>
+        <div class="form-group">
+            <label>Gender</label>
+            <select id="new-athlete-gender">
+                <option value="women">Women</option>
+                <option value="men">Men</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Nation</label>
+            <input type="text" id="new-athlete-nation" value="USA" readonly style="opacity:0.6;">
+        </div>
+    `;
+
+    showCustomModal('Add New Athlete', content, (modal) => {
+        const name = modal.querySelector('#new-athlete-name').value.trim();
+        const gender = modal.querySelector('#new-athlete-gender').value;
+        const nation = modal.querySelector('#new-athlete-nation').value;
+
+        if (!name) {
+            alert("Name is required.");
+            return false;
+        }
+
+        appState.athletes.push({ id: Date.now().toString(), name, nation, gender });
+        saveToStorage();
+        renderCurrentTab();
+        showToast(`Added ${name} (${gender}) ✅`);
+        return true;
+    });
+}
+
 function editAthlete(idx) {
     const athlete = appState.athletes[idx];
     if (!athlete) return;
 
-    const newName = prompt("Edit Name:", athlete.name);
-    if (newName && newName.trim() !== "" && newName !== athlete.name) {
-        // Update Athlete Record
-        athlete.name = newName.trim();
+    const content = `
+        <div class="form-group">
+            <label>Edit Name</label>
+            <input type="text" id="edit-athlete-name" value="${athlete.name}" required>
+        </div>
+    `;
 
-        // Update References in standard events (where name is cached)
-        ['women', 'men'].forEach(gender => {
-            Object.keys(appState.events[gender]).forEach(dist => {
-                const results = appState.events[gender][dist].results;
-                if (results) {
-                    results.forEach(r => {
-                        if (r.id === athlete.id) {
-                            r.name = athlete.name;
-                        }
-                    });
-                }
+    showCustomModal('Edit Athlete', content, (modal) => {
+        const newName = modal.querySelector('#edit-athlete-name').value.trim();
+
+        if (!newName) {
+            alert("Name cannot be empty.");
+            return false;
+        }
+
+        if (newName !== athlete.name) {
+            // Update Athlete Record
+            athlete.name = newName;
+
+            // Update References in standard events
+            ['women', 'men'].forEach(gender => {
+                Object.keys(appState.events[gender]).forEach(dist => {
+                    const results = appState.events[gender][dist].results;
+                    if (results) {
+                        results.forEach(r => {
+                            if (r.id === athlete.id) {
+                                r.name = athlete.name;
+                            }
+                        });
+                    }
+                });
             });
-        });
 
-        // Mass start uses ID references, so it picks up the new name automatically on render.
-
-        saveToStorage();
-        renderCurrentTab();
-    }
-}
-
-function openAthleteModal() {
-    const name = prompt("Athlete Name:");
-    if (!name) return;
-    const gender = prompt("Gender (women/men):", "women").toLowerCase();
-    const nation = "USA";
-    appState.athletes.push({ id: Date.now().toString(), name, nation, gender });
-    saveToStorage();
-    renderCurrentTab();
+            saveToStorage();
+            renderCurrentTab();
+            showToast(`Updated to ${newName} 📝`);
+        }
+        return true;
+    });
 }
 
 function deleteAthlete(idx) {
-    if (confirm('Delete athlete?')) {
+    const athlete = appState.athletes[idx];
+    if (!athlete) return;
+
+    const content = `
+        <p>Are you sure you want to delete <strong>${athlete.name}</strong>?</p>
+        <p style="font-size:0.9em; color:#ef4444;">Warning: This will not remove their historical results, but they will vanish from the main roster.</p>
+    `;
+
+    showCustomModal('Delete Athlete', content, () => {
         appState.athletes.splice(idx, 1);
         saveToStorage();
         renderCurrentTab();
-    }
+        showToast('Athlete deleted 🗑️');
+        return true;
+    });
 }
 
 function athleteOptions(list, ph) {
@@ -1340,68 +1725,92 @@ function athleteOptions(list, ph) {
 // =============================================================================
 // RULES & INFO RENDERER (Clean HTML)
 // =============================================================================
+// Helper to render Reduction Matrix/Path
+function renderReductionMatrixGlobal(g, quotas) {
+    // 1. Gather all spots with SOQC ranks
+    let allSpots = [];
+
+    // Define protected spots (which index is protected for which distance)
+    const protectedIndices = g === 'women'
+        ? { '500m': [0], 'mass_start': [0] }
+        : { '500m': [0], '1000m': [0], '1500m': [0], 'mass_start': [0] };
+
+    // Need to reconstruct who holds what spot roughly to display names
+    // This is a "best effort" visual mapping because the actual logic is complex (Best Rank wins)
+    // We will look for athletes in our Roster whose *events* include this distance
+    // AND who might arguably be filling this slot.
+    // Actually, simpler: The roster ALREADY tells us who is "at risk" via `reductionRank`.
+    // We can just match the `rank` in the spot to the `reductionRank` in the roster!
+
+    // Get current roster to find matching names
+    const rosterData = calculateReduction(g).roster;
+
+    Object.entries(quotas).forEach(([dist, q]) => {
+        if (q.soqcRanks && dist !== 'team_pursuit') {
+            q.soqcRanks.forEach((rank, i) => {
+                // Check if this specific spot index is protected
+                const isProtected = protectedIndices[dist] && protectedIndices[dist].includes(i);
+
+                if (!isProtected) {
+                    // Try to find the athlete who holds this Cut Rank
+                    // They must be in the roster AND have this `reductionRank` equal to the spot `rank`.
+                    // (See calculateReduction logic: p.reductionRank becomes the BEST soqc they have)
+                    // If an athlete has 500m (Rank 15) and 1000m (Rank 4), their reductionRank is 4.
+                    // The 500m spot (Rank 15) is effectively "held" by them but they are safely at Rank 4.
+                    // So the "Cut Rank 15" spot is nominally occupied by them, but they aren't the one being cut *at that rank*.
+                    // BUT, if someone else has ONLY Rank 15, they are cut.
+
+                    const holder = rosterData.find(p => p.reductionRank === rank);
+                    const holderName = holder ? holder.name : "Available";
+                    const isSafeByOtherEvent = holder && holder.events.some(e => e !== dist); // Rough check if multi-event
+
+                    allSpots.push({
+                        distance: dist.replace(/_/g, ' ').toUpperCase(),
+                        spotName: i === 0 ? '1st Spot' : (i === 1 ? '2nd Spot' : '3rd Spot'),
+                        rank: rank,
+                        holderName: holderName,
+                        isSafe: isSafeByOtherEvent
+                    });
+                }
+            });
+        }
+    });
+
+    // 2. Sort by Rank High -> Low (Highest number = Worst rank = First to cut)
+    allSpots.sort((a, b) => {
+        if (b.rank !== a.rank) return b.rank - a.rank;
+        return a.distance.localeCompare(b.distance);
+    });
+
+    // 3. Render
+    return `
+    <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+        <h5 style="color: #ef4444; margin-bottom: 15px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.5em">✂️</span> 
+            <div>
+                Reduction Order / The "Chopping Block"
+                <div style="font-size:0.7em; color:#aaa; font-weight:normal;">If Team Size > Cap, spots are cut in this order until we reach <strong>${g === 'women' ? '6' : '8'} athletes</strong>.</div>
+            </div>
+        </h5>
+        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
+            ${allSpots.map((spot, i) => `
+                <div style="min-width: 140px; background: ${i === 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; 
+                            border: 1px solid ${i === 0 ? '#ef4444' : 'rgba(255,255,255,0.1)'}; 
+                            padding: 10px; border-radius: 6px; text-align: center; position:relative;">
+                    <div style="font-size: 0.8em; color: #888;">#${i + 1} to Cut</div>
+                    <div style="font-weight: bold; color: ${i === 0 ? '#ef4444' : '#fff'}; margin: 5px 0;">${spot.distance}</div>
+                    <div style="font-size: 1.4em; font-weight: 900; color: #D4AF37; margin: 2px 0;">${spot.rank}</div>
+                    <div style="font-size: 0.85em; color: #aaa; border-top:1px solid rgba(255,255,255,0.1); margin-top:5px; padding-top:4px;">
+                        ${spot.holderName}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+    `;
+};
 function renderRules() {
     const config = OLYMPIC_CONFIG;
-
-    // Helper to render Reduction Matrix/Path
-    const renderReductionMatrix = (g, quotas) => {
-        // 1. Gather all spots with SOQC ranks
-        let allSpots = [];
-
-        // Define protected spots (which index is protected for which distance)
-        const protectedIndices = g === 'women'
-            ? { '500m': [0], 'mass_start': [0] }
-            : { '500m': [0], '1000m': [0], '1500m': [0], 'mass_start': [0] };
-
-        Object.entries(quotas).forEach(([dist, q]) => {
-            if (q.soqcRanks && dist !== 'team_pursuit') {
-                q.soqcRanks.forEach((rank, i) => {
-                    // Check if this specific spot index is protected
-                    const isProtected = protectedIndices[dist] && protectedIndices[dist].includes(i);
-
-                    if (!isProtected) {
-                        allSpots.push({
-                            distance: dist.replace(/_/g, ' ').toUpperCase(),
-                            spotName: i === 0 ? '1st Spot' : (i === 1 ? '2nd Spot' : '3rd Spot'),
-                            rank: rank
-                        });
-                    }
-                });
-            }
-        });
-
-        // 2. Sort by Rank High -> Low (Highest number = Worst rank = First to cut)
-        // Tie-breaker: If ranks equal, sort alphabetically (e.g. 10000M comes before 5000M, so 10k is cut first)
-        allSpots.sort((a, b) => {
-            if (b.rank !== a.rank) return b.rank - a.rank;
-            return a.distance.localeCompare(b.distance);
-        });
-
-        // 3. Render
-        return `
-            <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
-                <h5 style="color: #ef4444; margin-bottom: 15px; display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:1.5em">✂️</span> 
-                    <div>
-                        Reduction Order / The "Chopping Block"
-                        <div style="font-size:0.7em; color:#aaa; font-weight:normal;">If Team Size > Cap, spots are cut in this order until we reach <strong>${g === 'women' ? '6' : '8'} athletes</strong>.</div>
-                    </div>
-                </h5>
-                <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
-                    ${allSpots.map((spot, i) => `
-                        <div style="min-width: 120px; background: ${i === 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'}; 
-                                    border: 1px solid ${i === 0 ? '#ef4444' : 'rgba(255,255,255,0.1)'}; 
-                                    padding: 10px; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 0.8em; color: #888;">#${i + 1} to Cut</div>
-                            <div style="font-weight: bold; color: ${i === 0 ? '#ef4444' : '#fff'}; margin: 5px 0;">${spot.distance}</div>
-                            <div style="font-size: 0.85em; color: #aaa;">${spot.spotName}</div>
-                            <div style="font-size: 1.2em; font-weight: 900; color: #D4AF37; margin-top: 5px;">${spot.rank}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    };
 
     // Helper to render gender table
     const renderTable = (g, quotas) => `
@@ -1455,7 +1864,7 @@ function renderRules() {
                     `}).join('')}
                 </tbody>
             </table>
-            ${renderReductionMatrix(g, quotas)}
+            ${renderReductionMatrixGlobal(g, quotas)}
         </div>
     `;
 
@@ -1466,32 +1875,78 @@ function renderRules() {
 
         <div class="card" style="border-top: 4px solid #D4AF37;">
             <h3><span style="background:#D4AF37; color:black; padding:2px 8px; border-radius:4px; font-size:0.8em; margin-right:10px;">USA</span> How to Make ${getBranding('TEAM_NAME')}</h3>
-            <p class="text-muted" style="margin-bottom: 20px;">The process is nuanced, but the goal is simple: Be fast.</p>
+            <p class="text-muted" style="margin-bottom: 20px;">There are <b style="color:#fff;">three pathways</b> to earn a spot on the 2026 Olympic Team, plus rules about quotas and team size limits.</p>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">1. Win</div>
-                    <strong style="color: #fff; display:block; margin-bottom:5px;">Finish Top 2 or 3 at Selection</strong>
-                    <p style="font-size: 0.9em; color: #aaa;">Most spots are earned directly by finishing on the podium at the ${getBranding('SHORT_EVENT_NAME')} in Milwaukee.</p>
+            <!-- THREE PATHWAYS CARDS -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                
+                <!-- PATHWAY 1: DIRECT NOMINATION -->
+                <div style="background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(0,0,0,0.3)); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(220, 53, 69, 0.4); position: relative;">
+                    <div style="position: absolute; top: 8px; right: 10px; background: #dc3545; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">PROTECTED</div>
+                    <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pathway 1</div>
+                    <div style="font-size: 1.4rem; color: #dc3545; font-weight: 900; margin-bottom: 12px;">🏅 Direct Nomination</div>
+                    <strong style="color: #fff; display:block; margin-bottom: 10px; font-size: 0.95rem;">Pre-Qualified via World Cup</strong>
+                    <ul style="font-size: 0.92rem; color: #aaa; line-height: 1.6; padding-left: 18px; margin: 0;">
+                        <li>Medal at 2025 World Championships <b style="color:#fff;">AND</b> Top 5 at 2 Fall World Cups</li>
+                        <li><b style="color:#fff;">OR</b> Medal at 2 of the 4 Fall World Cups</li>
+                    </ul>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: #D4AF37;">
+                        ✓ These athletes are locked in before Trials
+                    </div>
                 </div>
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">2. Rank</div>
-                    <strong style="color: #fff; display:block; margin-bottom:5px;">We Need a "Ticket"</strong>
-                    <p style="font-size: 0.9em; color: #aaa;">The USA only has a set number of spots for each race. Even if you medal here, we need to have an Olympic "ticket" for you to use.</p>
+
+                <!-- PATHWAY 2: OLYMPIC TRIALS -->
+                <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(0,0,0,0.3)); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.4); position: relative;">
+                    <div style="position: absolute; top: 8px; right: 10px; background: #22c55e; color: #000; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">MOST SPOTS</div>
+                    <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pathway 2</div>
+                    <div style="font-size: 1.4rem; color: #22c55e; font-weight: 900; margin-bottom: 12px;">🏁 Olympic Trials</div>
+                    <strong style="color: #fff; display:block; margin-bottom: 10px; font-size: 0.95rem;">Earn Your Spot in Milwaukee</strong>
+                    <ul style="font-size: 0.92rem; color: #aaa; line-height: 1.6; padding-left: 18px; margin: 0;">
+                        <li>Finish in <b style="color:#fff;">Top 2-3</b> in your distance at Trials</li>
+                        <li>For Mass Start: Best <b style="color:#fff;">3 of 4</b> races (SLC + MKE)</li>
+                        <li>Must also have a USA quota spot available</li>
+                    </ul>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: #D4AF37;">
+                        📅 January 2-5, 2026 in Milwaukee, WI
+                    </div>
                 </div>
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size: 2em; color: #D4AF37; margin-bottom: 5px;">3. Survive</div>
-                    <strong style="color: #fff; display:block; margin-bottom:5px;">The 14 Skater Limit</strong>
-                    <p style="font-size: 0.9em; color: #aaa;">We can only take <strong>8 Men</strong> and <strong>6 Women</strong> total. If more people qualify, those with the lowest <strong>World Rankings</strong> get left home.</p>
+
+                <!-- PATHWAY 3: TEAM PURSUIT SPECIALIST -->
+                <div style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(0,0,0,0.3)); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(147, 51, 234, 0.4); position: relative;">
+                    <div style="position: absolute; top: 8px; right: 10px; background: #9333ea; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">DISCRETIONARY</div>
+                    <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Pathway 3</div>
+                    <div style="font-size: 1.4rem; color: #9333ea; font-weight: 900; margin-bottom: 12px;">👥 Team Pursuit Specialist</div>
+                    <strong style="color: #fff; display:block; margin-bottom: 10px; font-size: 0.95rem;">Selected by Coaching Staff</strong>
+                    <ul style="font-size: 0.92rem; color: #aaa; line-height: 1.6; padding-left: 18px; margin: 0;">
+                        <li>Max <b style="color:#fff;">2 per gender</b> can be added</li>
+                        <li>For athletes who excel at TP but didn't qualify individually</li>
+                        <li>Based on TP experience, compatibility, and performance</li>
+                    </ul>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: #D4AF37;">
+                        ⚡ Announced after Trials (by Jan 8)
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="card mt-2">
-            <h3>📊 Detailed Quota Breakdown</h3>
-            <p class="text-muted">Below shows exactly how many spots exist for each distance and who is pre-nominated.</p>
-            ${renderTable('women', config.women)}
-            ${renderTable('men', config.men)}
+            <!-- THE CATCH: TEAM SIZE LIMIT -->
+            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem 1.25rem; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-size: 1.3rem;">⚠️</span>
+                    <span style="color: #D4AF37; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 0.95rem;">The Catch: Team Size Limit</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <p style="font-size: 0.95rem; color: #aaa; line-height: 1.6; margin: 0;">
+                            Even if you qualify, there's a <b style="color:#fff;">14-person cap</b> (<b style="color:#3b82f6;">8 Men</b> + <b style="color:#ec4899;">6 Women</b>). 
+                            If more people qualify than spots available, the <b style="color:#fff;">Reduction Process</b> kicks in.
+                        </p>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 12px; border-left: 3px solid #ef4444;">
+                        <p style="font-size: 0.8rem; color: #888; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;">Reduction Rule</p>
+                        <p style="font-size: 0.95rem; color: #fff; margin: 0; line-height: 1.5;">Athlete with the <b>lowest World Ranking (SOQC)</b> in their qualifying event is cut first.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="card mt-2">
@@ -1518,7 +1973,7 @@ function renderRules() {
             </div>
             
             <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.9em;">
-                <h4 style="color: #666; margin-bottom: 10px;">Technical Terminology</h4>
+                <h4 style="color: #D4AF37; margin-bottom: 10px;">Technical Terminology</h4>
                 <ul style="list-style: none; padding: 0;">
                     <li style="margin-bottom: 5px;"><strong style="color:#aaa;">World Ranking (SOQC):</strong> Your global rank based on World Cups. Used to decide who gets cut if we qualify more than 14 skaters.</li>
                     <li style="margin-bottom: 5px;"><strong style="color:#aaa;">Direct Nomination:</strong> "Protected" status earned <em>before</em> these Trials by winning major World Cup medals. These athletes are already safe.</li>
@@ -1544,7 +1999,7 @@ function renderRules() {
                 <p>Quotas are earned for the <strong>Country</strong>, not the specific athlete, based on the 2025 Fall World Cups.</p>
                 <ul style="list-style-type: none; padding-left: 10px;">
                     <li style="margin-bottom: 8px;">📊 <strong>SOQC Points:</strong> Ranking based on World Cup points scored.</li>
-                    <li style="margin-bottom: 8px;">⏱️ <strong>SOQC Times:</strong> Ranking based on fastest times skate at World Cups.</li>
+                    <li style="margin-bottom: 8px;">⏱️ <strong>SOQC Times:</strong> Ranking based on fastest times skated at World Cups.</li>
                 </ul>
 
                 <h4 style="color: #D4AF37; margin-top: 15px;">Athlete Eligibility</h4>
@@ -1553,6 +2008,70 @@ function renderRules() {
                     <li style="margin-bottom: 8px;"><strong>Times:</strong> Must have skated the ${getBranding('QUALIFIER_NAME')} for their distance.</li>
                 </ul>
             </div>
+        </div>
+
+        <div class="card mt-2">
+            <h3>📅 Key Dates & Timeline</h3>
+            <div style="margin-top:20px; position: relative;">
+                <!-- Vertical Line -->
+                <div style="position:absolute; left:19px; top:5px; bottom:25px; width:2px; background:rgba(255,255,255,0.1);"></div>
+                
+                <!-- Qualification Windows -->
+                <div style="display:flex; gap:20px; margin-bottom:25px; position:relative;">
+                    <div style="min-width:40px; text-align:center;">
+                         <div style="width:10px; height:10px; background:#444; border-radius:50%; margin:6px auto; border:2px solid #000;"></div>
+                    </div>
+                    <div>
+                        <div style="color:#888; font-size:0.75rem; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Nov - Dec 2025</div>
+                        <div style="color:#fff; font-weight:bold; font-size:1.1rem; margin-bottom:4px;">ISU World Cups (Fall)</div>
+                        <div style="color:#666; font-size:0.85rem; line-height:1.4;">USA earns country quota spots based on results.<br>Top 5 finish = Direct Nomination pre-condition.</div>
+                    </div>
+                </div>
+
+                <!-- Olympic Trials -->
+                <div style="display:flex; gap:20px; margin-bottom:25px; position:relative;">
+                    <div style="min-width:40px; text-align:center;">
+                         <div style="width:14px; height:14px; background:#22c55e; border-radius:50%; margin:4px auto; box-shadow:0 0 0 4px rgba(34,197,94,0.15);"></div>
+                    </div>
+                    <div>
+                        <div style="color:#22c55e; font-size:0.75rem; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Jan 2-5, 2026</div>
+                        <div style="color:#fff; font-weight:900; font-size:1.1rem; margin-bottom:4px;">US Olympic Trials</div>
+                        <div style="color:#aaa; font-size:0.85rem;">Run at the Pettit National Ice Center in Milwaukee, WI.</div>
+                    </div>
+                </div>
+
+                <!-- Roster Announcement -->
+                <div style="display:flex; gap:20px; margin-bottom:25px; position:relative;">
+                    <div style="min-width:40px; text-align:center;">
+                         <div style="width:10px; height:10px; background:#9333ea; border-radius:50%; margin:6px auto; border:2px solid #000;"></div>
+                    </div>
+                    <div>
+                        <div style="color:#9333ea; font-size:0.75rem; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Jan 8, 2026</div>
+                        <div style="color:#fff; font-weight:bold; font-size:1.1rem; margin-bottom:4px;">Final Roster Announcement</div>
+                        <div style="color:#666; font-size:0.85rem;">Team Pursuit Specialists & Final Reduction made official.</div>
+                    </div>
+                </div>
+
+                <!-- Winter Olympics -->
+                 <div style="display:flex; gap:20px; position:relative;">
+                    <div style="min-width:40px; text-align:center;">
+                         <div style="width:10px; height:10px; background:#3b82f6; border-radius:50%; margin:6px auto; border:2px solid #000;"></div>
+                    </div>
+                    <div>
+                        <div style="color:#3b82f6; font-size:0.75rem; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Feb 6-22, 2026</div>
+                        <div style="color:#fff; font-weight:bold; font-size:1.1rem; margin-bottom:4px;">Winter Olympic Games</div>
+                        <div style="color:#666; font-size:0.85rem;">Milano Cortina, Italy</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card mt-2">
+            <h3>📊 Detailed Quota Breakdown</h3>
+            <p class="text-muted">Below shows exactly how many spots exist for each distance and who is pre-nominated.</p>
+            ${renderQuotaTable('women')}
+            <div style="margin-top:30px;"></div>
+            ${renderQuotaTable('men')}
+        </div>
     `;
 }
 
@@ -1675,12 +2194,22 @@ function renderMassStartTable(gender) {
 }
 
 function renderDistanceTable(gender, dist) {
-    const data = appState.events[gender][dist]?.results || [];
-    // Sort logic handled in edit/save, but ensure sorted for display
-    // For now assume array is objects: { id, name, time, time1, time2, best }
+    const eventData = appState.events[gender][dist] || {};
+    const results = eventData.results || [];
+    const isPublished = eventData.status === 'published';
+
+    // If not published and NOT an admin, show empty state
+    if (!isPublished && !appState.isAdmin) {
+        return `
+            <div class="card" style="text-align:center; padding:40px;">
+                <h3 style="color:#555;">${dist} Standings</h3>
+                <p class="text-muted">Results for this event have not been finalized yet.</p>
+            </div>
+        `;
+    }
 
     // Sort by Best Time (asc)
-    const sortedData = [...data].sort((a, b) => {
+    const sortedData = [...results].sort((a, b) => {
         if (!a.best) return 1;
         if (!b.best) return -1;
         return a.best.localeCompare(b.best); // Simple string compare for "38.50" vs "38.60" works usually if format consistent. Ideally parse.
@@ -2319,7 +2848,9 @@ function showSkatersToWatch(gender, dist) {
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 11px 0 ${i < 3 ? '11px 10px' : ''}; margin: 0 ${i < 3 ? '-10px' : '0'}; border-bottom: 1px solid rgba(255,255,255,0.04); ${i < 3 ? `background: linear-gradient(90deg, ${i === 0 ? 'rgba(201,162,39,0.2)' : 'rgba(201,162,39,0.1)'}, transparent); border-left: 3px solid #C9A227;` : ''}">
                             <div style="display: flex; align-items: center;">
                                 <span style="width: 36px; font-size: 18px; font-weight: 900; color: #C9A227; font-style: italic; text-shadow: 0 0 10px rgba(201, 162, 39, 0.4);">${s.rank}</span>
-                                <span style="font-size: 15px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0; text-shadow: 0 0 8px rgba(0,0,0,0.5);">${s.name}</span>
+                                <span style="font-size: 15px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0; text-shadow: 0 0 8px rgba(0,0,0,0.5);">
+                                    ${s.id ? `<a href="https://speedskatingresults.com/index.php?p=17&s=${s.id}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.3); transition: color 0.2s;">${s.name}</a>` : s.name}
+                                </span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 ${s.notes ? `<span style="background: #C9A227; color: #000; font-size: 8px; padding: 3px 6px; border-radius: 3px; font-weight: 900; box-shadow: 0 0 8px rgba(201,162,39,0.4); border: 1px solid #ffe680;">${s.notes}</span>` : ''}
@@ -2460,10 +2991,10 @@ function downloadSkatersImage(gender, dist) {
                     .then(() => showToast('Shared successfully! 🚀'))
                     .catch((error) => {
                         console.log('Error sharing:', error);
-                        saveAsFile(blob, fileName);
+                        saveAsFile(blob, fileName, file);
                     });
             } else {
-                saveAsFile(blob, fileName);
+                saveAsFile(blob, fileName, file);
             }
         }, 'image/png');
     }).catch(err => {
@@ -2473,12 +3004,69 @@ function downloadSkatersImage(gender, dist) {
     });
 }
 
-function saveAsFile(blob, fileName) {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-    showToast('Image downloaded! 📸');
+function saveAsFile(blob, fileName, fileObject = null) {
+    const url = URL.createObjectURL(blob);
+
+    // Check if sharing is supported (for the button)
+    const canShare = fileObject && navigator.canShare && navigator.canShare({ files: [fileObject] });
+
+    // Create a modal
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.style.zIndex = '10000';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:90vh; width:auto; text-align:center;">
+             <div class="modal-header">
+                <h3>📸 Image Ready</h3>
+                <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
+            </div>
+            <div class="modal-body" style="padding:10px;">
+                <p style="color:#666; margin-bottom:15px; font-size:1.1em;">
+                    ${canShare ? 'Tap <strong>"Share to Instagram"</strong> below!' : 'Right-Click (or Long Press) the image below to Save.'}
+                </p>
+                <div style="background:#eee; padding:10px; border-radius:4px; display:inline-block;">
+                    <img src="${url}" style="max-height:55vh; max-width:100%; border:1px solid #ccc; box-shadow:0 4px 12px rgba(0,0,0,0.1); display:block;" />
+                </div>
+                <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; flex-direction:column; gap:10px; align-items:center;">
+                    
+                    ${canShare ? `<button id="native-share-btn" class="btn btn-primary" style="width:100%; max-width:300px; font-size:1.2em; padding:12px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); border:none;">🚀 Share / Repost</button>` : ''}
+                    
+                    <a href="${url}" download="${fileName}" class="btn" style="background:#444; color:white; width:100%; max-width:300px; padding:10px;">⬇️ Download Image File</a>
+                    
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()" style="width:100%; max-width:300px;">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    if (canShare) {
+        document.getElementById('native-share-btn').onclick = async () => {
+            try {
+                await navigator.share({
+                    files: [fileObject],
+                    title: 'Skaters to Watch',
+                    text: 'Check out the Season Bests for the 2026 Olympic Trials! 🇺🇸⛸️ #OlympicTrials2026'
+                });
+                showToast('Shared successfully! 🚀');
+            } catch (err) {
+                console.log('Share failed/cancelled', err);
+            }
+        };
+    }
+
+    // Auto-trigger download only on desktop (non-mobile) to avoid interfering with mobile behavior
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobile) {
+        try {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) { console.warn("Auto-download blocked", e); }
+    }
 }
 
 function exportData() {
@@ -2489,31 +3077,6 @@ function exportData() {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-}
-
-function toggleAdminMode() {
-    if (!appState.isAdmin) {
-        const password = prompt("Enter Admin Password:");
-        if (password === "admin123") { // Simple protection
-            appState.isAdmin = true;
-            document.body.classList.add('admin-mode');
-            document.getElementById('admin-login-btn').innerText = "🔓 Admin Active";
-            alert("Admin Mode Unlocked");
-        } else {
-            alert("Incorrect Password");
-        }
-    } else {
-        appState.isAdmin = false;
-        document.body.classList.remove('admin-mode');
-        document.getElementById('admin-login-btn').innerText = "🔒 Admin";
-        // If on a hidden tab, switch to dashboard
-        if (['events', 'athletes'].includes(appState.currentTab)) {
-            appState.currentTab = 'dashboard';
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelector('[data-tab="dashboard"]').classList.add('active');
-        }
-    }
-    renderCurrentTab();
 }
 
 function openShareModal(athleteName) {
@@ -2530,7 +3093,7 @@ function openShareModal(athleteName) {
         let label = e;
         if (e === 'TpSpec') label = 'Team Pursuit';
         if (e === 'mass_start') label = 'Mass Start';
-        return `< span > ${label}</span > `;
+        return `<span>${label}</span>`;
     }).join('');
 
     document.getElementById('share-overlay').style.display = 'flex';
@@ -2726,19 +3289,29 @@ function toggleAdminMode() {
     const isAdmin = localStorage.getItem('salty_admin_access') === 'true';
 
     if (isAdmin) {
-        if (confirm('Log out of Admin Mode?')) {
-            localStorage.removeItem('salty_admin_access');
-            location.reload();
-        }
+        // Direct logout
+        localStorage.removeItem('salty_admin_access');
+        location.reload();
     } else {
-        const password = prompt("Enter Admin Password:");
-        if (password === 'gold2026') {
-            localStorage.setItem('salty_admin_access', 'true');
-            showToast('Admin Mode Unlocked! 🔓');
-            checkAdminStatus();
-            setTimeout(() => location.reload(), 500);
-        } else if (password) {
-            alert('Incorrect Password');
-        }
+        // Use custom modal for login
+        const content = `
+            <div class="form-group">
+                <label>Enter Admin Password</label>
+                <input type="password" id="admin-password" placeholder="Password" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); border: 1px solid #444; color: white;" required>
+            </div>
+        `;
+
+        showCustomModal('Admin Login 🔒', content, (modal) => {
+            const password = modal.querySelector('#admin-password').value;
+            if (password === 'gold2026') {
+                localStorage.setItem('salty_admin_access', 'true');
+                showToast('Admin Mode Unlocked! 🔓');
+                setTimeout(() => location.reload(), 500);
+                return true;
+            } else {
+                alert('Incorrect Password'); // This alert is fine, or we could use toast
+                return false;
+            }
+        });
     }
 }
