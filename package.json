@@ -1,0 +1,26 @@
+{
+  "name": "mass_start_olympic_trials",
+  "version": "1.0.0",
+  "description": "A web-based application for managing and scoring Mass Start Speedskating races for the U.S. Olympic Team Trials.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rgnlchamp/mass-start-ot-2026.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rgnlchamp/mass-start-ot-2026/issues"
+  },
+  "homepage": "https://github.com/rgnlchamp/mass-start-ot-2026#readme",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "cors": "^2.8.5",
+    "express": "^5.2.1"
+  }
+}

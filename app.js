@@ -65,6 +65,7 @@ function loadFromStorage() {
             const data = JSON.parse(saved);
             appState.athletes = data.athletes || [];
             appState.msRaces = data.msRaces || appState.msRaces;
+            appState.isuConfig = data.isuConfig || {};
 
             if (data.events) {
                 ['women', 'men'].forEach(gender => {
@@ -109,7 +110,8 @@ function saveToStorage() {
     localStorage.setItem('olympicTrials_v1', JSON.stringify({
         athletes: appState.athletes,
         msRaces: appState.msRaces,
-        events: appState.events
+        events: appState.events,
+        isuConfig: appState.isuConfig
     }));
 }
 
@@ -149,6 +151,9 @@ function renderCurrentTab() {
             renderMsEntryForm(appState.selectedMsRace);
         }
     }
+
+    // Auto-Pilot Button Sync
+    if (typeof updateAutoPilotBtn === 'function') updateAutoPilotBtn();
 }
 
 
@@ -1491,7 +1496,10 @@ function renderDistanceTable(gender, dist) {
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
                         PDF
                     </button>
-                    ${appState.isAdmin ? `<button class="btn btn-sm btn-outline-warning" onclick="openDistanceEdit('${gender}', '${dist}')">✏️ Edit Results</button>` : ''}
+                    ${appState.isAdmin ? `
+                        <button class="btn btn-sm btn-outline-warning" onclick="openDistanceEdit('${gender}', '${dist}')">✏️ Edit</button>
+                        <button class="btn btn-sm btn-outline-info" onclick="openIsuImportModal('${gender}', '${dist}')">📡 Import</button>
+                    ` : ''}
                 </div>
             </div>
             
