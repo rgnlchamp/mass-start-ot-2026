@@ -41,6 +41,17 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     line-height: 1.6;
+    overflow-x: hidden;
+    /* Prevent horizontal shift */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+}
+
+body::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
 }
 
 .app-container {
@@ -1540,5 +1551,4 @@ body.admin-mode .admin-only {
     transform: scale(1.25);
     animation: none;
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.9);
-}
 }
