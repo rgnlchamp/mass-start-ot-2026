@@ -128,7 +128,7 @@ const SKATERS_TO_WATCH = {
                 { rank: 5, name: 'Jonathan Tobon', time: '6:43.40', notes: '', id: 33691 },
                 { rank: 6, name: 'Herb Harbison', time: '6:44.06', notes: 'PR', id: 60856 },
                 { rank: 7, name: 'Thomas Fitzgerald', time: '6:47.51', notes: '', id: 60857 },
-                { rank: 8, name: 'Samuel Hart-Gorman', time: '6:56.65', notes: 'SB', id: 72647 }
+                { rank: 8, name: 'Samuel Hart-Gorman', time: '6:56.65', notes: 'PR', id: 72647 }
             ]
         },
         '10000m': {
