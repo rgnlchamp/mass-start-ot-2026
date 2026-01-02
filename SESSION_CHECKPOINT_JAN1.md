@@ -21,3 +21,7 @@ The application has been updated with the following key changes:
 ## Next Steps
 - Ready for fresh tasks or further refinements.
 - Server is running (node server.js).
+
+## Recent Fixes (Jan 1 PM)
+- **Mass Start Tie-Breaker**: Logic updated to use the *most recently completed race* (instead of hardcoded Race 4) for ranking athletes with tied total points.
+- **Deployment**: Fix deployed to live production site (`saltygold-trials.vercel.app`).

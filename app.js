@@ -1502,6 +1502,17 @@ function calculateMassStartStandings(gender) {
         athleteScores[a.id] = { id: a.id, name: a.name, races: {}, total: 0 };
     });
 
+    // Identify the most recent race that has been completed (has results)
+    let latestRaceNum = 0;
+    if (appState.msRaces && appState.msRaces[gender]) {
+        for (let r = 4; r >= 1; r--) {
+            if (appState.msRaces[gender][r]) {
+                latestRaceNum = r;
+                break;
+            }
+        }
+    }
+
     [1, 2, 3, 4].forEach(raceNum => {
         const race = appState.msRaces[gender][raceNum];
         if (race && race.results) {
@@ -1537,19 +1548,21 @@ function calculateMassStartStandings(gender) {
         }
     });
 
-    // Store Race 4 score for tiebreaker purposes
+    // Store Latest Race score for tiebreaker purposes
     Object.values(athleteScores).forEach(s => {
-        s.race4Score = s.races[4] !== undefined ? s.races[4] : -1; // -1 if no Race 4 result
+        s.tiebreakerScore = (latestRaceNum > 0 && s.races[latestRaceNum] !== undefined)
+            ? s.races[latestRaceNum]
+            : -1;
     });
 
-    // Sort by total points descending, then by Race 4 score (tiebreaker)
+    // Sort by total points descending, then by Latest Race score (tiebreaker)
     return Object.values(athleteScores).sort((a, b) => {
         // Primary sort: total points (higher is better)
         if (b.total !== a.total) {
             return b.total - a.total;
         }
-        // Tiebreaker: better performance in Race 4 (higher score wins)
-        return b.race4Score - a.race4Score;
+        // Tiebreaker: better performance in the latest completed race
+        return b.tiebreakerScore - a.tiebreakerScore;
     });
 }
 
