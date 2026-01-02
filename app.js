@@ -527,12 +527,15 @@ function renderOlympicTeamTracker() {
         }
 
         return `
-            <div class="section-header" style="flex-direction: row;">
-                <div class="btn-group" style="margin-right: 20px;">
-                    <button class="btn ${gender === 'women' ? 'btn-primary' : 'btn-outline-primary'}" 
-                        onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
-                    <button class="btn ${gender === 'men' ? 'btn-primary' : 'btn-outline-primary'}" 
-                        onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
+            <div class="section-header" style="flex-direction: row; align-items: flex-end;">
+                <div class="segment-group-wrap" style="margin-right: 20px;">
+                    <div class="segment-label">Select Gender</div>
+                    <div class="segment-group">
+                        <button class="btn-segment ${gender === 'women' ? 'active' : ''}" 
+                            onclick="appState.viewGender='women'; renderCurrentTab()">Women</button>
+                        <button class="btn-segment ${gender === 'men' ? 'active' : ''}" 
+                            onclick="appState.viewGender='men'; renderCurrentTab()">Men</button>
+                    </div>
                 </div>
                 <h2>${getBranding('TRACKER_TITLE')}</h2>
             </div>

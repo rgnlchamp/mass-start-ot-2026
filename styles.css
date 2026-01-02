@@ -1458,12 +1458,28 @@ body.admin-mode .admin-only {
 }
 
 /* THEMED BUTTONS & TABS */
+.segment-group-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.segment-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent-gold);
+    margin-bottom: -4px;
+}
+
 .segment-group {
     display: inline-flex;
-    background: #222;
+    background: #1a1a1a;
     padding: 4px;
     border-radius: 8px;
-    border: 1px solid #444;
+    border: 1px solid var(--accent-gold);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
 }
 
 .btn-segment {
