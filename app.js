@@ -178,6 +178,14 @@ function renderCurrentTab() {
 
     // Auto-Pilot Button Sync
     if (typeof updateAutoPilotBtn === 'function') updateAutoPilotBtn();
+
+    // Notify parent (Shopify) of new height
+    setTimeout(notifyParentHeight, 100);
+}
+
+function notifyParentHeight() {
+    const height = document.body.scrollHeight;
+    window.parent.postMessage({ type: 'setHeight', height: height }, '*');
 }
 
 
