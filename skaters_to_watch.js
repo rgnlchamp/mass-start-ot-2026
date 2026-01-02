@@ -53,14 +53,9 @@ const SKATERS_TO_WATCH = {
             skaters: [
                 { rank: 1, name: 'Greta Myers', time: '4:00.70', notes: 'NR PR', id: 68934 },
                 { rank: 2, name: 'Giorgia Birkeland', time: '4:04.59', notes: 'PR', id: 43655 },
-                { rank: 3, name: 'Mia Manganello', time: '4:07.67', notes: '', id: 33692 },
-                { rank: 4, name: 'Marley Soldan', time: '4:20.03', notes: '', id: 60851 },
-                { rank: 5, name: 'Piper Yde', time: '4:22.40', notes: '', id: 52313 },
-                { rank: 6, name: 'Rebecca Simmons', time: '4:28.16', notes: '', id: 45786 },
-                { rank: 7, name: 'Nastasja Radulovic', time: '4:34.88', notes: 'PR', id: 60277 },
-                { rank: 8, name: 'Leah Choi', time: '4:35.30', notes: 'PR', id: 68935 },
-                { rank: 9, name: 'Anna Quinn', time: '4:36.31', notes: '', id: 60901 },
-                { rank: 10, name: 'Evie Forrer', time: '4:37.28', notes: 'PR', id: 91272 }
+                { rank: 3, name: 'Marley Soldan', time: '4:20.03', notes: '', id: 60851 },
+                { rank: 4, name: 'Piper Yde', time: '4:22.40', notes: '', id: 52313 },
+                { rank: 5, name: 'Rebecca Simmons', time: '4:28.16', notes: '', id: 45786 }
             ]
         },
         '5000m': {
@@ -129,13 +124,11 @@ const SKATERS_TO_WATCH = {
                 { rank: 1, name: 'Casey Dawson', time: '6:01.84', notes: 'NR PR', id: 52314 },
                 { rank: 2, name: 'Ethan Cepuran', time: '6:12.56', notes: '', id: 52315 },
                 { rank: 3, name: 'Kelin Dunfee', time: '6:33.64', notes: '', id: 43657 },
-                { rank: 4, name: 'William Silk', time: '6:37.57', notes: 'PR', id: 60855 },
-                { rank: 5, name: 'Emery Lehman', time: '6:38.50', notes: '', id: 33693 },
-                { rank: 6, name: 'Jordan Stolz', time: '6:41.18', notes: '', id: 66105 },
-                { rank: 7, name: 'Jonathan Tobon', time: '6:43.40', notes: '', id: 33691 },
-                { rank: 8, name: 'Herbert Harbison', time: '6:44.06', notes: 'PR', id: 60856 },
-                { rank: 9, name: 'Thomas Fitzgerald', time: '6:47.51', notes: '', id: 60857 },
-                { rank: 10, name: 'Carl Platt', time: '6:50.21', notes: '', id: 33694 }
+                { rank: 4, name: 'Jonathan Tobon', time: '6:43.40', notes: '', id: 33691 },
+                { rank: 5, name: 'William Silk', time: '6:37.57', notes: 'PR', id: 60855 },
+                { rank: 6, name: 'Thomas Fitzgerald', time: '6:47.51', notes: '', id: 60857 },
+                { rank: 7, name: 'Herb Harbison', time: '6:44.06', notes: 'PR', id: 60856 },
+                { rank: 8, name: 'Samuel Hart-Gorman', time: '7:05.47', notes: 'SB', id: null }
             ]
         },
         '10000m': {
