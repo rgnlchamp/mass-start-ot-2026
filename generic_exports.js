@@ -154,25 +154,26 @@ function shareGenericDistancePdf() {
             </tr>`).join('');
     }
 
-    printWindow.document.write(`
+    // Generate printable HTML (re-using the logic but into an iframe)
+    const printHtml = `
         <html>
         <head>
             <title>${dist} Standings</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;700;900&display=swap');
-                body { font-family: 'Outfit', sans-serif; padding: 40px; color: #000; }
+                body { font-family: 'Outfit', sans-serif; padding: 40px; color: #000; -webkit-print-color-adjust: exact !important; }
                 .header { border-bottom: 4px solid #000; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content:space-between; align-items:flex-end; }
                 .title { font-size: 40px; font-weight: 900; text-transform: uppercase; line-height:1; }
                 .subtitle { color: #d9534f; font-weight: bold; font-size: 18px; text-transform: uppercase; }
                 table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                 thead { background: #000; color: #fff; text-transform: uppercase; }
-                th { padding: 12px; font-size: 14px; letter-spacing: 1px; }
+                th { padding: 12px; font-size: 14px; letter-spacing: 1px; color: #fff !important; }
                 td { padding: 12px; border-bottom: 1px solid #ddd; font-size: 14px; text-align: center; }
                 .text-left { text-align: left; }
                 .text-right { text-align: right; }
-                .rank-badge-1 { background: #D4AF37; color: #fff; width:24px; height:24px; border-radius:50%; display:inline-block; line-height:24px; }
-                .rank-badge-2 { background: #A0A0A0; color: #fff; width:24px; height:24px; border-radius:50%; display:inline-block; line-height:24px; }
-                .rank-badge-3 { background: #CD7F32; color: #fff; width:24px; height:24px; border-radius:50%; display:inline-block; line-height:24px; }
+                .rank-badge-1 { background: #D4AF37 !important; color: #fff !important; width:24px; height:24px; border-radius:50%; display:inline-block; line-height:24px; }
+                .rank-badge-2 { background: #A0A0A0 !important; color: #fff !important; width:24px; height:24px; border-radius:50%; display:inline-block; line-height:24px; }
+                .rank-badge-3 { background: #CD7F32 !important; color: #fff !important; width:24px; height:24px; border-radius:50%; display:inline-block; line-height:24px; }
                 .footer { margin-top: 50px; border-top: 2px solid #000; padding-top: 10px; font-size: 10px; color: #666; display:flex; justify-content:space-between; text-transform:uppercase; }
             </style>
         </head>
@@ -194,9 +195,36 @@ function shareGenericDistancePdf() {
             </div>
         </body>
         </html>
-    `);
-    printWindow.document.close();
-    // printWindow.print(); // Auto-print? Let user do it.
+    `;
+
+    // Generate unique ID for iframe
+    const frameId = 'pdf-print-frame-generic';
+    let iframe = document.getElementById(frameId);
+    if (iframe) iframe.remove();
+
+    iframe = document.createElement('iframe');
+    iframe.id = frameId;
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(printHtml);
+    doc.close();
+
+    showToast('Preparing PDF... 📄');
+
+    // Wait for fonts/styles
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        showToast('PDF Export Ready');
+    }, 800);
 }
 
 function getRankBadgeClass(rank) {

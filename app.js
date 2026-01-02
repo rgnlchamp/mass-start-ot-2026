@@ -2230,10 +2230,6 @@ function renderDistanceTable(gender, dist) {
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
                         PDF
                     </button>
-                    ${appState.isAdmin ? `
-                        <button class="btn btn-sm btn-outline-warning" onclick="openDistanceEdit('${gender}', '${dist}')">✏️ Edit</button>
-                        <button class="btn btn-sm btn-outline-info" onclick="openIsuImportModal('${gender}', '${dist}')">📡 Import</button>
-                    ` : ''}
                 </div>
             </div>
             
@@ -2762,16 +2758,34 @@ function shareMsStandingsPdf() {
         </html>
     `;
 
-    // Open print dialog
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printHtml);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-        printWindow.print();
-    }, 500);
+    // Generate unique ID for iframe
+    const frameId = 'pdf-print-frame';
+    let iframe = document.getElementById(frameId);
+    if (iframe) iframe.remove();
 
-    showToast('PDF ready to print/save 📄');
+    iframe = document.createElement('iframe');
+    iframe.id = frameId;
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(printHtml);
+    doc.close();
+
+    showToast('Preparing PDF... 📄');
+
+    // Wait for styles/fonts to load
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        showToast('PDF Export Ready');
+    }, 800);
 }
 
 // Show Skaters to Watch modal - Instagram-style design
@@ -3007,66 +3021,18 @@ function downloadSkatersImage(gender, dist) {
 function saveAsFile(blob, fileName, fileObject = null) {
     const url = URL.createObjectURL(blob);
 
-    // Check if sharing is supported (for the button)
-    const canShare = fileObject && navigator.canShare && navigator.canShare({ files: [fileObject] });
+    // Direct Download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    // Create a modal
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.style.zIndex = '10000';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width:90vh; width:auto; text-align:center;">
-             <div class="modal-header">
-                <h3>📸 Image Ready</h3>
-                <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
-            </div>
-            <div class="modal-body" style="padding:10px;">
-                <p style="color:#666; margin-bottom:15px; font-size:1.1em;">
-                    ${canShare ? 'Tap <strong>"Share to Instagram"</strong> below!' : 'Right-Click (or Long Press) the image below to Save.'}
-                </p>
-                <div style="background:#eee; padding:10px; border-radius:4px; display:inline-block;">
-                    <img src="${url}" style="max-height:55vh; max-width:100%; border:1px solid #ccc; box-shadow:0 4px 12px rgba(0,0,0,0.1); display:block;" />
-                </div>
-                <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; flex-direction:column; gap:10px; align-items:center;">
-                    
-                    ${canShare ? `<button id="native-share-btn" class="btn btn-primary" style="width:100%; max-width:300px; font-size:1.2em; padding:12px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); border:none;">🚀 Share / Repost</button>` : ''}
-                    
-                    <a href="${url}" download="${fileName}" class="btn" style="background:#444; color:white; width:100%; max-width:300px; padding:10px;">⬇️ Download Image File</a>
-                    
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()" style="width:100%; max-width:300px;">Close</button>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
+    // Cleanup
+    setTimeout(() => URL.revokeObjectURL(url), 100);
 
-    if (canShare) {
-        document.getElementById('native-share-btn').onclick = async () => {
-            try {
-                await navigator.share({
-                    files: [fileObject],
-                    title: 'Skaters to Watch',
-                    text: 'Check out the Season Bests for the 2026 Olympic Trials! 🇺🇸⛸️ #OlympicTrials2026'
-                });
-                showToast('Shared successfully! 🚀');
-            } catch (err) {
-                console.log('Share failed/cancelled', err);
-            }
-        };
-    }
-
-    // Auto-trigger download only on desktop (non-mobile) to avoid interfering with mobile behavior
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (!isMobile) {
-        try {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (e) { console.warn("Auto-download blocked", e); }
-    }
+    showToast(`✅ Graphic Saved: ${fileName}`);
 }
 
 function exportData() {
@@ -3204,21 +3170,21 @@ function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.style.cssText = `
-    background: rgba(40, 167, 69, 0.9);
-    color: white;
-    padding: 12px 24px;
-    border - radius: 8px;
-    margin - top: 10px;
-    box - shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    backdrop - filter: blur(5px);
-    font - weight: 500;
-    transform: translateX(100 %);
-    transition: transform 0.3s cubic - bezier(0.175, 0.885, 0.32, 1.275);
-    display: flex;
-    align - items: center;
-    gap: 10px;
+        background: rgba(40, 167, 69, 0.9);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        margin-top: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(5px);
+        font-weight: 500;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        align-items: center;
+        gap: 10px;
     `;
-    toast.innerHTML = `< span > ${message}</span > `;
+    toast.innerHTML = `<span>${message}</span>`;
 
     container.appendChild(toast);
 
@@ -3295,11 +3261,11 @@ function toggleAdminMode() {
     } else {
         // Use custom modal for login
         const content = `
-            <div class="form-group">
+        < div class="form-group" >
                 <label>Enter Admin Password</label>
                 <input type="password" id="admin-password" placeholder="Password" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); border: 1px solid #444; color: white;" required>
             </div>
-        `;
+    `;
 
         showCustomModal('Admin Login 🔒', content, (modal) => {
             const password = modal.querySelector('#admin-password').value;
