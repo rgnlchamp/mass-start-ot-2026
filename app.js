@@ -3129,45 +3129,32 @@ function downloadShareCard() {
 // SHARE APP FEATURE
 // =============================================================================
 async function shareApp() {
-    // Detect if running locally
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    let urlToShare = window.location.href;
-
-    if (isLocal) {
-        // Warning for the admin/user testing this feature
-        const usePlaceholder = confirm(
-            "⚠️ You are sharing from Localhost.\n\n" +
-            "The link 'localhost' only works on YOUR computer. If you share this email/text, others won't be able to open it.\n\n" +
-            "Click OK to share a PLACEHOLDER Public URL instead (for testing).\n" +
-            "Click Cancel to allow sharing the Localhost link anyway."
-        );
-
-        if (usePlaceholder) {
-            urlToShare = "https://olympic-trials-tracker.vercel.app"; // Update this after actual deployment
-        }
-    }
+    // We hardcode the Shopify URL so people share the STORE link, not the internal Vercel link
+    const urlToShare = "https://saltygoldsupply.com/pages/trials-tracker";
 
     const shareData = {
         title: '2026 U.S. Olympic Trials Tracker',
-        text: 'Check out the official 2026 U.S. Olympic Trials Qualification Tracker! Follow the standings live here:',
+        text: 'Follow the 2026 U.S. Olympic Trials Qualification standings live!',
         url: urlToShare
     };
 
+    // Try native share first (Mobile/Safari)
     if (navigator.share) {
         try {
             await navigator.share(shareData);
+            return; // Success
         } catch (err) {
-            console.log('Share canceled or failed', err);
+            console.log('Native share failed or canceled:', err);
         }
-    } else {
-        // Fallback to clipboard
-        try {
-            await navigator.clipboard.writeText(urlToShare);
-            showToast('Link copied to clipboard! 📋');
-        } catch (err) {
-            console.error('Failed to copy', err);
-            prompt('Copy this link:', urlToShare);
-        }
+    }
+
+    // Fallback: Copy to clipboard
+    try {
+        await navigator.clipboard.writeText(urlToShare);
+        showToast('✅ Link copied to clipboard!');
+    } catch (err) {
+        // Ultimate fallback
+        prompt('Copy this link to share:', urlToShare);
     }
 }
 
