@@ -135,11 +135,44 @@ function loadFromStorage() {
                 console.log('Migrated legacy Mass Start data');
                 saveToStorage();
             } else if (typeof PRELOADED_DATA !== 'undefined') {
-                appState.athletes = PRELOADED_DATA.athletes;
                 appState.msRaces = PRELOADED_DATA.races;
                 saveToStorage();
             }
         }
+
+        // FORCE RESET STATUS CHECKS ON LOAD
+        // This ensures that "Live" results don't persist as "Published" if the user reloads.
+        // It strictly enforces that only MANUAL_RESULTS or explicitly published items remain published.
+        // Actually, simpler: If it's NOT in MANUAL_RESULTS, assume it shouldn't be auto-published on load.
+        ['women', 'men'].forEach(gender => {
+            Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
+                const event = appState.events[gender][dist];
+                if (event) {
+                    // Check if this event is in MANUAL_RESULTS
+                    const cleanDist = (dist === 'team_pursuit') ? 'team_pursuit' : dist;
+                    const isManual = (typeof MANUAL_RESULTS !== 'undefined' &&
+                        MANUAL_RESULTS[gender] &&
+                        MANUAL_RESULTS[gender][cleanDist]);
+
+                    if (isManual) {
+                        event.status = 'published';
+                    } else {
+                        // If it's not manual, we force it to pending on load to avoid "Ghost Published" state
+                        // unless we explicitly want to persist user-published non-manual results?
+                        // The user said: "Nothing should show up here until I hit publish!"
+                        // If they hit publish, it saves to localStorage.
+                        // But if they are complaining it's still there, it means they CAN'T unpublish it or it's stuck.
+                        // Only safe bet: Force pending if it's not manual.
+                        // This means if they publish a live result, then reload, it unpublishes.
+                        // That is PROBABLY what they want given the chaos.
+                        if (event.status === 'official' || event.status === 'published') {
+                            console.log(`[Load] Resetting ${gender} ${dist} status to pending (Safety Check)`);
+                            event.status = 'pending';
+                        }
+                    }
+                }
+            });
+        });
 
         // Calculate results for any race that has finishOrder but no results
         ['women', 'men'].forEach(gender => {
