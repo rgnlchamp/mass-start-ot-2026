@@ -233,7 +233,7 @@ async function runAutoSyncPass() {
     for (const [key, map] of Object.entries(mappings)) {
         const [gender, dist] = key.split('_');
         try {
-            const url = `https://live.isuresults.eu/api/events/${map.eventId}/competitions/${map.competitionId}/results`;
+            const url = `https://api.isuresults.eu/events/${map.eventId}/competitions/${map.competitionId}/results`;
             const res = await fetch(`/api/isu-proxy?url=${encodeURIComponent(url)}`);
             if (!res.ok) continue;
 
@@ -428,7 +428,7 @@ function startPublicAutoRefresh(gender, dist) {
     publicRefreshInterval = setInterval(async () => {
         // Fetch silently
         try {
-            const url = `https://live.isuresults.eu/api/events/${map.eventId}/competitions/${map.competitionId}/results`;
+            const url = `https://api.isuresults.eu/events/${map.eventId}/competitions/${map.competitionId}/results`;
             // Use relative proxy path which works on both Vercel and Local
             // Add cache busting timestamp
             const res = await fetch(`/api/isu-proxy?url=${encodeURIComponent(url)}&t=${Date.now()}`);
@@ -596,7 +596,7 @@ async function previewIsuResults() {
     // We try two common API patterns
     const urls = [
         `https://api.isuresults.eu/events/${eventId}/competitions/${competitionId}/results/?inSeconds=1`,
-        `https://live.isuresults.eu/api/events/${eventId}/competitions/${competitionId}/results`
+        `https://api.isuresults.eu/events/${eventId}/competitions/${competitionId}/results`
     ];
 
     setImportStatus(`Fetching results for competition ${competitionId}...`);
