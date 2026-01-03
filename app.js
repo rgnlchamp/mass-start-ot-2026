@@ -668,8 +668,8 @@ function renderOlympicTeamTracker() {
                         <span>= Spot earned at Trials</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="background:#f59e0b; color:#000; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">Pending</span>
-                        <span>= Results entered but not published</span>
+                        <span style="font-size:1.2em;">👀</span>
+                        <span>= Skaters to Watch</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
                         <span style="background:#337ab7; color:#fff; padding:2px 6px; border-radius:3px; font-size:0.7em; text-transform:uppercase; font-weight:bold;">O. Trials</span>
