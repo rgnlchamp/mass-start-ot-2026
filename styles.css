@@ -1015,12 +1015,38 @@ body[data-tab="olympic"] .print-footer {
 }
 
 @media print {
+
+    /* Print Layout Optimization */
+    @page {
+        margin: 0.5cm;
+        size: portrait;
+    }
+
+    body {
+        background: white;
+        margin: 0;
+        padding: 0;
+        min-height: auto !important;
+        height: auto !important;
+    }
+
+    /* Hide the old footer from index.html to avoid double footer / extra page */
+    .print-footer {
+        display: none !important;
+    }
+
     .card {
-        border: 1px solid #000;
-        box-shadow: none;
+        border: none !important;
+        box-shadow: none !important;
         background: transparent !important;
         color: black !important;
-        page-break-inside: avoid;
+        padding: 0 !important;
+        margin: 0 !important;
+        page-break-inside: auto;
+    }
+
+    .result-card {
+        margin-top: 0 !important;
     }
 
     /* Rank Colors for Print (Darker for White Paper) */
@@ -1028,26 +1054,42 @@ body[data-tab="olympic"] .print-footer {
         color: #B8860B !important;
     }
 
-    /* Dark Gold */
     .data-table .rank-2 {
         color: #333 !important;
     }
 
-    /* Dark Grey/Silver */
     .data-table .rank-3 {
         color: #8B4513 !important;
     }
 
-    /* Dark Bronze */
-
     /* Clean up Double Lines */
     .table-container {
         border: none !important;
+        overflow: visible !important;
     }
 
     .panel-header {
         border-bottom: none !important;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 6px 4px !important;
+        /* Tighter padding */
+        font-size: 11pt;
+        /* Readable but efficient */
+    }
+
+    /* Footer Branding Helpers */
+    .print-branding {
+        display: block !important;
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 10px;
+        border-top: 2px solid #C5A059;
+        font-size: 10pt;
+        color: #666;
     }
 }
 
@@ -1568,6 +1610,7 @@ body.admin-mode .admin-only {
     animation: none;
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.9);
 }
+
 /* Fix for PDF print visibility from JS rendered tables */
 .result-time-cell {
     font-size: 1.1em;

@@ -399,7 +399,9 @@ async function checkPublicAutoStart() {
 }
 
 // Run check
-setTimeout(checkPublicAutoStart, 1000);
+// Run check immediately and then loop
+checkPublicAutoStart();
+setInterval(checkPublicAutoStart, 60000); // Check for new live races every 60s
 
 let publicRefreshInterval = null;
 
@@ -798,10 +800,11 @@ function updateAutoPilotBtn() {
 
     // 2. Update Header Indicator
     if (indicator) {
-        // Only show the "LIVE" icon to the Admin (User Request)
-        if (isAuto && appState.isAdmin) {
+        // Only show if Auto Pilot is ACTUALLY engaged
+        if (isAuto) {
             indicator.style.display = 'inline-block';
             indicator.title = "Auto-Pilot Active: Scanning for results every 60s";
+            indicator.classList.remove('pulse-eye'); // Remove pulse as requested
         } else {
             indicator.style.display = 'none';
         }
@@ -809,9 +812,9 @@ function updateAutoPilotBtn() {
 
     if (!btn) return;
 
-    // Show button logic
+    // Show button logic: Only visible to Admin or if configured
     if (appState.isAdmin || hasMappings) {
-        btn.style.display = 'block';
+        btn.style.display = 'inline-block';
     } else {
         btn.style.display = 'none';
         return;
@@ -819,14 +822,14 @@ function updateAutoPilotBtn() {
 
     if (isAuto) {
         btn.innerHTML = '🔄 Auto-Pilot ON';
-        btn.style.background = 'rgba(0, 255, 0, 0.2)';
-        btn.style.color = '#4ade80';
-        btn.style.border = '1px solid #4ade80';
-        btn.classList.add('pulse-eye');
+        btn.style.background = 'rgba(212, 175, 55, 0.2)'; // Goldish tint
+        btn.style.color = '#D4AF37';
+        btn.style.border = '1px solid #D4AF37';
+        btn.classList.remove('pulse-eye'); // Remove pulse
     } else {
         btn.innerHTML = '🔄 Auto-Pilot OFF';
-        btn.style.background = '#222';
-        btn.style.color = '#888';
+        btn.style.background = 'transparent';
+        btn.style.color = '#555';
         btn.style.border = '1px solid #444';
         btn.classList.remove('pulse-eye');
     }
