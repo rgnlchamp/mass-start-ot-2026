@@ -447,6 +447,29 @@ function startPublicAutoRefresh(gender, dist) {
             const data = await res.json();
             const parsed = parseIsuData(data);
 
+            // SORTING FIX: Ensure valid time sort and re-rank logic
+            const parseTimeVal = (t) => {
+                if (!t || t === 'NT') return Infinity;
+                try {
+                    // Handle "1:23.45" or "34.56"
+                    let seconds = 0;
+                    if (t.includes(':')) {
+                        const parts = t.split(':');
+                        seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+                    } else {
+                        seconds = parseFloat(t);
+                    }
+                    return isNaN(seconds) ? Infinity : seconds;
+                } catch (e) { return Infinity; }
+            };
+
+            parsed.sort((a, b) => parseTimeVal(a.time) - parseTimeVal(b.time));
+
+            // Re-assign ranks based on sorted order so "Pos" column is correct
+            parsed.forEach((p, idx) => {
+                p.rank = idx + 1;
+            });
+
             if (parsed.length > 0) {
                 // Update State in Memory Only (Don't save to localStorage)
 
