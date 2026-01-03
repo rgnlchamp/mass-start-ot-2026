@@ -750,10 +750,8 @@ function calculateReduction(gender) {
 
 
 
-            if (hasResults) {
-                // Show status banner
-                const statusClass = isPublished ? 'status-banner official' : 'status-banner unofficial';
-                const statusText = isPublished ? "FINAL UNOFFICIAL RESULTS" : "📡 Live Updates / Unofficial";
+            if (hasResults && isPublished) {
+                // Only use results if they are published
                 trialsResults = (eventData.results || []).sort((a, b) => a.rank - b.rank);
             } else {
                 trialsResults = [];
