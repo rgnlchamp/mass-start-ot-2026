@@ -2162,6 +2162,20 @@ function renderMassStartStandings() {
     }
     const viewDist = appState.viewDistance;
 
+    // Calculate results count to determine if Share button should show
+    let hasResults = false;
+    if (viewDist === 'mass_start') {
+        // Simple check: do we have any finished race data that leads to standings? (Check Race 4 specifically or just if Points exist)
+        // Better: calculate it or check if any races committed.
+        // Actually, calculateMassStartStandings is fast enough to check length? Or just check if races exist.
+        // Let's assume if there are any points ledgers.
+        const standings = calculateMassStartStandings(gender);
+        hasResults = standings.length > 0;
+    } else {
+        const eventData = appState.events[gender][viewDist] || {};
+        hasResults = (eventData.results && eventData.results.length > 0);
+    }
+
     let html = `
         <div class="section-header" style="flex-direction: column; align-items: flex-start; gap: 15px;">
             <div style="display:flex; justify-content:space-between; width:100%; flex-wrap: wrap; gap: 10px;">
@@ -2183,7 +2197,9 @@ function renderMassStartStandings() {
                  `).join('')}
             </div>
             
-            <h2 style="margin-top: 10px;">🏆 ${viewDist === 'mass_start' ? 'Mass Start Series' : viewDist} Standings</h2>
+            <h2 class="no-print" style="margin-top: 10px; display:flex; align-items:center; gap:10px;">
+                🏆 ${viewDist === 'mass_start' ? 'Mass Start Series' : viewDist} Standings
+            </h2>
         </div>
     `;
 
@@ -2205,6 +2221,7 @@ function renderMassStartTable(gender) {
     const standings = calculateMassStartStandings(gender);
     const filteredStandings = standings.filter(s => s.total > 0 || (s.droppedRaces && s.droppedRaces.length > 0)); // Show if they have points
     const preNominated = OLYMPIC_CONFIG[gender].mass_start?.preNominated || [];
+    const hasResults = filteredStandings.length > 0;
 
     return `
         <div class="card" id="ms-standings-card">
@@ -2214,11 +2231,11 @@ function renderMassStartTable(gender) {
                     <p class="text-muted" style="margin-bottom:0;">Accumulated points from Races 1-4. (Official selection uses Best 3 of 4).</p>
                 </div>
                 <div style="display:flex; gap:10px;">
-
-                    <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
-                        PDF
+                    ${hasResults ? `
+                    <button onclick="window.print()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
+                        🖨️ Print
                     </button>
+                    ` : ''}
                 </div>
             </div>
             <div class="table-container">
@@ -2383,9 +2400,11 @@ function renderDistanceTable(gender, dist) {
                     <p class="text-muted" style="margin-bottom:0;">${is500 ? 'Ranked by fastest of two races.' : 'Ranked by fastest time.'}</p>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button onclick="window.print()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
-                        🖨️ Print
-                    </button>
+                    ${sortedData.length > 0 ? `
+                        <button onclick="window.print()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
+                            🖨️ Print
+                        </button>
+                    ` : ''}
                 </div>
             </div>
             
@@ -3269,7 +3288,25 @@ function closeShareModal() {
 }
 
 function downloadShareCard() {
-    const element = document.getElementById('capture-target');
+    // Determine which card is active
+    const individualCard = document.getElementById('capture-target');
+    const standingsCard = document.getElementById('capture-target-standings');
+
+    // Choose the visible one
+    const element = (standingsCard.style.display !== 'none') ? standingsCard : individualCard;
+
+    // Auto-Name
+    const teamName = getBranding('TEAM_NAME').replace(/ /g, '');
+    let filename = '';
+
+    if (element === standingsCard) {
+        const title = document.getElementById('st-card-title').innerText.replace(/\n/g, '_').replace(/ /g, '_');
+        filename = `Standings_${title}_${Date.now()}.jpg`;
+    } else {
+        const athlete = document.getElementById('share-athlete-name').innerText.replace(/[^a-zA-Z0-9]/g, '_');
+        filename = `${teamName}_${athlete}.jpg`;
+    }
+
     const btn = document.querySelector('.share-download-btn');
     const originalText = btn.innerText;
     btn.innerText = 'Generating...';
@@ -3283,18 +3320,22 @@ function downloadShareCard() {
                 return;
             }
 
-            const filename = `${getBranding('TEAM_NAME').replace(/ /g, '')}_${document.getElementById('share-athlete-name').innerText.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
             const file = new File([blob], filename, { type: 'image/jpeg' });
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
             if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
                 // Dynamic Text based on what we are sharing
-                const titleText = document.getElementById('share-title-label').innerText;
-                const shareText = titleText.includes('UNOFFICIAL') ? "Unofficially Official! 🏅" : "Officially Qualified! 🇺🇸";
+                let shareText = '';
+                if (element === standingsCard) {
+                    shareText = "Current Standings Updates! 📊";
+                } else {
+                    const titleText = document.getElementById('share-title-label').innerText;
+                    shareText = titleText.includes('UNOFFICIAL') ? "Unofficially Official! 🏅" : "Officially Qualified! 🇺🇸";
+                }
 
                 navigator.share({
                     files: [file],
-                    title: `${getBranding('TEAM_NAME')} Qualifier`,
+                    title: `${getBranding('TEAM_NAME')} Update`,
                     text: `${shareText} ${getBranding('HASHTAG')} `
                 })
                     .then(() => {
@@ -3369,6 +3410,94 @@ function openTeamShare(name, eventsString) {
     }).join('');
 
     // 3. Show Modal
+    modal.style.display = 'flex';
+
+    // Toggle Views
+    document.getElementById('capture-target').style.display = 'block';
+    document.getElementById('capture-target-standings').style.display = 'none';
+}
+
+function openStandingsShare(gender, dist) {
+    const modal = document.getElementById('share-overlay');
+    if (!modal) return;
+
+    // Toggle Views
+    document.getElementById('capture-target').style.display = 'none';
+    const card = document.getElementById('capture-target-standings');
+    card.style.display = 'block';
+
+    const isMS = (dist === 'mass_start');
+    const genderLabel = gender.toUpperCase() + "'S";
+    const distLabel = isMS ? "MASS START POINTS" : dist.replace('_', ' ').toUpperCase();
+
+    // 2. Get Data FIRST (to use length in badge)
+    let results = [];
+    const CARD_LIMIT = 10;
+
+    if (dist === 'mass_start') {
+        results = calculateMassStartStandings(gender).slice(0, CARD_LIMIT);
+    } else {
+        const eventData = appState.events[gender][dist] || {};
+        // For distances, we want the best times
+        results = (eventData.results || []).map(r => ({
+            name: r.name,
+            total: r.best || r.time,
+            rank: r.rank
+        })).sort((a, b) => a.rank - b.rank).slice(0, CARD_LIMIT);
+    }
+
+    // 3. Set Header & Subtitle
+    let subTitle = "Current Standings";
+    let footerText = "* Unofficial Standings based on best 3 of 4 race results";
+
+    if (!isMS) {
+        subTitle = "Unofficial Results"; // Distance default
+        if (dist === '500m') {
+            footerText = "* Unofficial Results based on fastest of 2 races";
+        } else {
+            footerText = "* Unofficial Results";
+        }
+    }
+
+    document.getElementById('st-card-title').innerHTML = `${genderLabel}<br><span style="color:#fff;">${distLabel}</span>`;
+
+    // Update Sub-Header Badges
+    const badgeContainer = document.querySelector('#capture-target-standings .ig-header > div');
+    if (badgeContainer) {
+        badgeContainer.innerHTML = `
+           <span style="background:#D4AF37; color:#000; font-weight:800; font-size:10px; padding:4px 12px; text-transform:uppercase;">${subTitle}</span>
+           <span style="border:1px solid #D4AF37; color:#D4AF37; font-weight:600; font-size:10px; padding:4px 12px; text-transform:uppercase;">Top ${results.length}</span>
+        `;
+    }
+
+    document.getElementById('st-head-data').innerText = isMS ? "TOTAL" : "TIME";
+    document.getElementById('st-footer-note').innerText = footerText;
+
+    // 4. Build Data Rows
+    const tbody = document.getElementById('st-card-body');
+    let rows = '';
+
+    // DYNAMIC DENSITY: If > 8 results, compact the rows
+    const isComplaint = results.length > 8;
+    const paddingY = isComplaint ? "8px" : "12px";
+    const fontSizeName = isComplaint ? "12px" : "13px";
+
+    results.forEach((r, i) => {
+        const isOdd = i % 2 !== 0;
+        const bg = isOdd ? 'rgba(255,255,255,0.05)' : 'transparent';
+        const rankColor = (i < 3) ? '#D4AF37' : '#666';
+        const nameColor = (i < 3) ? '#fff' : '#ccc';
+
+        rows += `
+            <tr style="background:${bg}; border-bottom:1px solid #222;">
+                <td style="padding:${paddingY} 0; color:${rankColor}; font-weight:800; font-size:14px;">${i + 1}</td>
+                <td style="padding:${paddingY} 0; color:${nameColor}; font-weight:700; font-size:${fontSizeName}; text-transform:uppercase;">${r.name}</td>
+                <td style="padding:${paddingY} 0; text-align:right; font-family:monospace; font-size:14px; color:#fff;">${r.total}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rows;
     modal.style.display = 'flex';
 }
 

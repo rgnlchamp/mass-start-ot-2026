@@ -1016,80 +1016,158 @@ body[data-tab="olympic"] .print-footer {
 
 @media print {
 
-    /* Print Layout Optimization */
+    /* 1. Page Setup */
     @page {
-        margin: 0.5cm;
-        size: portrait;
+        margin: 1.0cm;
+        /* Slightly more space */
+        size: letter portrait;
     }
 
     body {
         background: white;
+        color: #000 !important;
+        font-family: "Georgia", serif;
         margin: 0;
         padding: 0;
-        min-height: auto !important;
-        height: auto !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
-    /* Hide the old footer from index.html to avoid double footer / extra page */
-    .print-footer {
+    /* 2. Hide Screen Elements & Ghost Headers */
+    .no-print,
+    .nav-bar,
+    button,
+    .share-download-btn,
+    .print-footer,
+    .ig-standings-card,
+    .share-overlay,
+    .panel-header h2,
+    /* Hide screen headers */
+    .panel-header svg,
+    .panel-header {
         display: none !important;
     }
 
+    /* 3. Reset Layout Containers */
+    .container,
+    .main-content,
     .card {
-        border: none !important;
-        box-shadow: none !important;
-        background: transparent !important;
-        color: black !important;
-        padding: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
         margin: 0 !important;
-        page-break-inside: auto;
+        padding: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
     }
 
-    .result-card {
+    /* 4. Professional Header Styling */
+    .print-only {
+        display: block !important;
+        margin-bottom: 30px !important;
+        border-bottom: 3px solid #D4AF37 !important;
+        /* SALTY GOLD BORDER */
+        padding-bottom: 20px !important;
+        text-align: center !important;
+    }
+
+    .print-only h1 {
+        font-family: "Georgia", serif !important;
+        font-size: 32pt !important;
+        color: #000 !important;
+        letter-spacing: 2px !important;
+        margin: 15px 0 10px 0 !important;
+        text-transform: uppercase !important;
+    }
+
+    .print-only h2 {
+        font-family: "Arial", sans-serif !important;
+        font-size: 11pt !important;
+        color: #666 !important;
+        font-weight: normal !important;
+        margin-top: 5px !important;
+        letter-spacing: 2px !important;
+        text-transform: uppercase !important;
+    }
+
+    /* 5. Data Table Styling */
+    .table-container {
+        overflow: visible !important;
         margin-top: 0 !important;
     }
 
-    /* Rank Colors for Print (Darker for White Paper) */
-    .data-table .rank-1 {
-        color: #B8860B !important;
-    }
-
-    .data-table .rank-2 {
-        color: #333 !important;
-    }
-
-    .data-table .rank-3 {
-        color: #8B4513 !important;
-    }
-
-    /* Clean up Double Lines */
-    .table-container {
+    .data-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
         border: none !important;
-        overflow: visible !important;
+        margin-top: 20px !important;
     }
 
-    .panel-header {
-        border-bottom: none !important;
-        margin-bottom: 10px;
+    .data-table thead th {
+        background: transparent !important;
+        color: #000 !important;
+        border-bottom: 2px solid #D4AF37 !important;
+        /* GOLD HEADER LINE */
+        border-top: none !important;
+        font-family: "Arial", sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 10pt !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        padding: 10px 4px !important;
     }
 
-    .data-table th,
-    .data-table td {
-        padding: 6px 4px !important;
-        /* Tighter padding */
-        font-size: 11pt;
-        /* Readable but efficient */
+    .data-table tbody td {
+        background: transparent !important;
+        /* FORCE REMOVE GRADIENTS */
+        color: #000 !important;
+        border-bottom: 1px solid #ddd !important;
+        font-family: "Arial", sans-serif !important;
+        font-size: 11pt !important;
+        padding: 12px 4px !important;
+        line-height: 1.4 !important;
     }
 
-    /* Footer Branding Helpers */
+    /* Remove Zebra Striping */
+    .data-table tbody tr {
+        background: transparent !important;
+    }
+
+    /* 6. Rank Highlighting (Salty Gold Flair) */
+    .rank-1 {
+        color: #B8860B !important;
+        font-weight: 900 !important;
+        font-size: 1.2em !important;
+    }
+
+    /* Dark Gold for print */
+    .rank-2 {
+        color: #333 !important;
+        font-weight: 800 !important;
+    }
+
+    .rank-3 {
+        color: #555 !important;
+        font-weight: 800 !important;
+    }
+
+    /* 7. Footer Branding */
     .print-branding {
         display: block !important;
-        text-align: center;
-        margin-top: 20px;
-        padding-top: 10px;
-        border-top: 2px solid #C5A059;
-        font-size: 10pt;
-        color: #666;
+        margin-top: 50px !important;
+        padding-top: 20px !important;
+        border-top: 1px solid #D4AF37 !important;
+        /* THIN GOLD LINE */
+        text-align: center !important;
+    }
+
+    .print-branding div {
+        color: #000 !important;
+        font-family: "Georgia", serif !important;
+        letter-spacing: 3px !important;
+        font-size: 9pt !important;
+        font-weight: bold !important;
+        text-transform: uppercase !important;
     }
 }
 
@@ -1415,6 +1493,51 @@ body.admin-mode .admin-only {
     box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
 }
 
+/* SHARE CARD - STANDINGS */
+.ig-standings-card {
+    width: 450px;
+    min-height: auto;
+    padding-bottom: 40px;
+    background: radial-gradient(circle at top, #1a1a2e, #000);
+    border: 2px solid #D4AF37;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    display: none;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    box-sizing: border-box;
+    position: relative;
+    overflow: visible;
+    /* Allow content to grow */
+}
+
+.ig-standings-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+    opacity: 0.8;
+}
+
+.ig-table-container {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ig-table-container table tr:last-child {
+    border-bottom: none !important;
+}
+
+.ig-table-container table td {
+    vertical-align: middle;
+}
+
 .seg-vulnerable {
     background: var(--accent-gold);
 }
@@ -1623,4 +1746,103 @@ body.admin-mode .admin-only {
     .result-time-cell {
         color: #000 !important;
     }
+}
+
+/* SHARE MODAL LAYOUT FIX */
+/* SHARE MODAL LAYOUT FIX - REFACTORED FOR ROBUSTNESS */
+.share-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    /* Use block display with scroll handling on the overlay itself */
+    display: block;
+    overflow-y: auto;
+    backdrop-filter: blur(5px);
+    padding: 20px;
+    /* Padding to prevent edge touching */
+    box-sizing: border-box;
+    text-align: center;
+    /* Helper for inline-block centering if needed, but we use margin auto */
+}
+
+/* Helper to vertically align if content is short, but scroll if long */
+.share-overlay::before {
+    content: '';
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+    margin-right: -0.25em;
+}
+
+.share-modal {
+    background: #111;
+    padding: 30px;
+    border-radius: 20px;
+    border: 1px solid #333;
+    border-top: 4px solid #D4AF37;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+    /* Layout */
+    display: inline-block;
+    /* Allows vertical-align middle */
+    vertical-align: middle;
+    width: auto;
+    max-width: 90%;
+    /* Prevent hitting edges */
+    margin: 40px auto;
+    /* Ensure space at top/bottom when scrolling */
+
+    /* Remove internal scroll constraints - let it grow! */
+    max-height: none;
+    overflow: visible;
+    position: relative;
+    text-align: left;
+    /* Reset text align */
+}
+
+/* Ensure Download button sits nicely at bottom with gap */
+.share-download-btn {
+    margin-top: 30px;
+    /* Increased from 25px */
+    width: 100%;
+    max-width: 300px;
+    background: linear-gradient(135deg, #D4AF37 0%, #aa8c2c 100%);
+    border: none;
+    color: #000;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+    transition: all 0.2s;
+    position: relative;
+    z-index: 20;
+    /* Ensure above any potential overflow */
+}
+
+.share-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+    background: #fff;
+}
+
+.close-share {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10;
+}
+
+.close-share:hover {
+    color: #fff;
 }

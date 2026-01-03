@@ -61,33 +61,90 @@
             Olympic Team Trials</p>
     </div>
     <div id="share-overlay" class="share-overlay" style="display:none;">
-        <div class="share-modal">
+        <div class="share-modal" style="width: auto; max-width: 95%;">
             <button class="close-share" onclick="closeShareModal()">×</button>
             <h3>📱 Instagram Share Card</h3>
-            <p style="color:#aaa; font-size:0.9em; margin-bottom:15px;">Download this image to share on Stories or Feed!
-            </p>
+            <p style="color:#aaa; font-size:0.9em; margin-bottom:15px; text-align:center;">Download this image to share
+                on Stories or Feed!</p>
 
-            <div id="capture-target" class="ig-card">
-                <!-- Header Removed -->
-                <div class="ig-content">
-                    <div id="share-title-label" class="ig-qualified-label">OFFICIALLY QUALIFIED FOR THE TEAM</div>
-                    <h1 id="share-athlete-name">ATHLETE NAME</h1>
-                    <div class="ig-events-label">EVENTS</div>
-                    <div id="share-athlete-events" class="ig-events-list">
-                        <span>500m</span><span>1000m</span>
+            <!-- Content Wrapper to enforce stacking -->
+            <div class="share-content-container"
+                style="display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%; padding-bottom: 20px;">
+
+                <!-- 1. INDIVIDUAL ATHLETE CARD -->
+                <div id="capture-target" class="ig-card" style="display:none;">
+                    <!-- Header Removed -->
+                    <div class="ig-content">
+                        <div id="share-title-label" class="ig-qualified-label">OFFICIALLY QUALIFIED FOR THE TEAM</div>
+                        <h1 id="share-athlete-name">ATHLETE NAME</h1>
+                        <div class="ig-events-label">EVENTS</div>
+                        <div id="share-athlete-events" class="ig-events-list">
+                            <span>500m</span><span>1000m</span>
+                        </div>
+                    </div>
+                    <div class="ig-footer">
+                        <p
+                            style="font-weight: 900; color: #fff; font-size: 24px; letter-spacing: -1px; margin-bottom: 5px;">
+                            @SALTYGOLDSUPPLY</p>
+                        <p class="ig-brand"
+                            style="color: #D4AF37; font-weight: 800; font-size: 14px; letter-spacing: 2px;">
+                            WWW.SALTYGOLDSUPPLY.COM</p>
                     </div>
                 </div>
-                <div class="ig-footer">
-                    <p
-                        style="font-weight: 900; color: #fff; font-size: 24px; letter-spacing: -1px; margin-bottom: 5px;">
-                        @SALTYGOLDSUPPLY</p>
-                    <p class="ig-brand" style="color: #D4AF37; font-weight: 800; font-size: 14px; letter-spacing: 2px;">
-                        WWW.SALTYGOLDSUPPLY.COM</p>
+
+                <!-- 2. STANDINGS CARD (NEW) -->
+                <div id="capture-target-standings" class="ig-card ig-standings-card"
+                    style="display:block; padding: 40px 30px;">
+                    <div class="ig-header" style="text-align:center; margin-bottom:20px;">
+                        <p
+                            style="color:#666; font-size:10px; letter-spacing:2px; margin-bottom:5px; text-transform:uppercase;">
+                            Trials 2026</p>
+                        <h2 id="st-card-title"
+                            style="font-size:32px; font-weight:800; line-height:1.1; margin:0; text-transform:uppercase; color:#D4AF37;">
+                            WOMEN'S<br><span style="color:#fff;">MASS START POINTS</span></h2>
+
+                        <div style="display:flex; justify-content:center; gap:0; margin-top:15px;">
+                            <span
+                                style="background:#D4AF37; color:#000; font-weight:800; font-size:10px; padding:4px 12px; text-transform:uppercase;">Current
+                                Standings</span>
+                            <span
+                                style="border:1px solid #D4AF37; color:#D4AF37; font-weight:600; font-size:10px; padding:4px 12px; text-transform:uppercase;">Top
+                                12</span>
+                        </div>
+                    </div>
+
+                    <div class="ig-table-container">
+                        <table style="width:100%; border-collapse:collapse; font-size:12px; color:#fff;">
+                            <thead>
+                                <tr
+                                    style="border-bottom:1px solid #333; color:#666; font-size:9px; text-transform:uppercase; letter-spacing:1px;">
+                                    <th style="text-align:left; padding-bottom:8px;">Rank</th>
+                                    <th style="text-align:left; padding-bottom:8px;">Athlete</th>
+                                    <th id="st-head-data" style="text-align:right; padding-bottom:8px;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="st-card-body">
+                                <!-- Rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="ig-footer" style="margin-top:auto; padding-top:20px; text-align:center;">
+                        <p id="st-footer-note"
+                            style="color:#666; font-size:9px; font-style:italic; margin-bottom:15px;">*
+                            Unofficial Standings
+                            based on best 3 of 4 race results</p>
+                        <p
+                            style="font-weight: 900; color: #D4AF37; font-size: 18px; letter-spacing: 1px; margin-bottom: 5px;">
+                            @SALTYGOLDSUPPLY</p>
+                        <p style="color: #666; font-weight: 500; font-size: 10px; letter-spacing: 2px;">
+                            WWW.SALTYGOLDSUPPLY.COM</p>
+                    </div>
                 </div>
+
+                <button class="btn btn-primary share-download-btn" onclick="downloadShareCard()">⬇️ Download
+                    Image</button>
             </div>
-
-
-            <button class="btn btn-primary share-download-btn" onclick="downloadShareCard()">⬇️ Download Image</button>
         </div>
     </div>
 
