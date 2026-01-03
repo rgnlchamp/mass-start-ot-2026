@@ -745,7 +745,7 @@ function calculateReduction(gender) {
             // This ensures DRAFT data doesn't leak into the team math.
             const eventData = appState.events[gender][dist];
             // Generic Status Banner Logic
-            const isPublished = eventData.status === 'published';
+            const isPublished = eventData.status === 'published' || eventData.status === 'official';
             const hasResults = (eventData.results || []).length > 0; // Assuming 'results' refers to eventData.results
 
 
