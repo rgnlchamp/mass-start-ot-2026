@@ -421,7 +421,17 @@ function startPublicAutoRefresh(gender, dist) {
     // If no mapping, try to use the hardcoded one + guess competition ID? 
     // Hard without compID. So we rely on mapping being present (which happens if checkPublicAutoStart succeeds)
 
-    if (!map) return;
+    // If no mapping, try to run check once to see if we can find it
+    if (!map) {
+        console.warn(`[Public LIVE] No mapping found for ${gender} ${dist}. Retrying check...`);
+        checkPublicAutoStart().then(() => {
+            // Try again after check
+            if (appState.isuConfig && appState.isuConfig.mappings && appState.isuConfig.mappings[`${gender}_${dist}`]) {
+                startPublicAutoRefresh(gender, dist);
+            }
+        });
+        return;
+    }
 
     console.log(`[Public LIVE] Started polling for ${gender} ${dist}`);
 
@@ -438,7 +448,8 @@ function startPublicAutoRefresh(gender, dist) {
             const parsed = parseIsuData(data);
 
             if (parsed.length > 0) {
-                // Update State in Memory Only (Don't save to localStorage to avoid persisting garbage on user devices)
+                // Update State in Memory Only (Don't save to localStorage)
+
                 // SAFETY CHECK: If status is 'official' (Manual Override), DO NOT OVERWRITE with live data
                 if (appState.events[gender][dist] && appState.events[gender][dist].status === 'official') {
                     console.log(`[Public LIVE] Skipping update for ${gender} ${dist} - Marked Official`);
@@ -447,17 +458,16 @@ function startPublicAutoRefresh(gender, dist) {
 
                 if (!appState.events[gender][dist]) appState.events[gender][dist] = { results: [] };
 
-                appState.events[gender][dist].results = newResults;
-                // Force status to pending for live updates to ensure they don't leak into Rosters
+                const oldLen = (appState.events[gender][dist].results || []).length;
+                appState.events[gender][dist].results = parsed;
                 appState.events[gender][dist].status = 'pending';
 
                 // Re-render ONLY if current tab is still results
-                if (appState.currentTab === 'results') {
-                    // We need to be careful not to infinite loop re-rendering.
-                    // Ideally we'd just update the table DOM.
-                    // For MVP: Simple re-render is fine.
-                    const main = document.getElementById('main-content');
-                    if (main) main.innerHTML = renderMassStartStandings();
+                if (window.renderCurrentTab) window.renderCurrentTab();
+
+                // Show toast if count changed (to avoid spamming)
+                if (parsed.length !== oldLen && window.showToast) {
+                    window.showToast(`📡 Live Update: ${parsed.length} Skaters`);
                 }
             }
         } catch (e) {
