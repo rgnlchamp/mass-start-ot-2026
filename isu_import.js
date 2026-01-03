@@ -467,7 +467,14 @@ function startPublicAutoRefresh(gender, dist) {
 
             // Re-assign ranks based on sorted order so "Pos" column is correct
             parsed.forEach((p, idx) => {
-                p.rank = idx + 1;
+                const val = parseTimeVal(p.time);
+                if (val === Infinity) {
+                    // It's a non-time status (DQ, DNF, DNS, etc)
+                    // Keep the text status if possible, or just '-'
+                    p.rank = p.time && p.time.length < 5 ? p.time : '-';
+                } else {
+                    p.rank = idx + 1;
+                }
             });
 
             if (parsed.length > 0) {
