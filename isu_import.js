@@ -665,7 +665,7 @@ function parseIsuData(data) {
         return { name: cleanName(name), time: cleanTime(rawTime), rank };
     });
 
-    return entries;
+    return entries.filter(e => e.time !== "NT");
 }
 
 function cleanTime(raw) {
