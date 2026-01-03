@@ -439,18 +439,17 @@ function startPublicAutoRefresh(gender, dist) {
 
             if (parsed.length > 0) {
                 // Update State in Memory Only (Don't save to localStorage to avoid persisting garbage on user devices)
-                if (!appState.events[gender]) appState.events[gender] = {};
+                // SAFETY CHECK: If status is 'official' (Manual Override), DO NOT OVERWRITE with live data
+                if (appState.events[gender][dist] && appState.events[gender][dist].status === 'official') {
+                    console.log(`[Public LIVE] Skipping update for ${gender} ${dist} - Marked Official`);
+                    return;
+                }
+
                 if (!appState.events[gender][dist]) appState.events[gender][dist] = { results: [] };
 
-                const newResults = parsed.map((d, i) => ({
-                    id: 'isu-auto-' + i,
-                    name: d.name,
-                    time: d.time,
-                    best: d.time, // Fix for sorting: renderDistanceTable expects .best
-                    rank: d.rank
-                }));
-
                 appState.events[gender][dist].results = newResults;
+                // Force status to pending for live updates to ensure they don't leak into Rosters
+                appState.events[gender][dist].status = 'pending';
 
                 // Re-render ONLY if current tab is still results
                 if (appState.currentTab === 'results') {
