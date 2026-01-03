@@ -9,12 +9,11 @@ function openIsuImportModal(gender, dist) {
     modal.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center; backdrop-filter:blur(5px);`;
 
     modal.innerHTML = `
-
-        < div style = "background:#1a1a2e; border:1px solid #D4AF37; color:#fff; padding:25px; width:500px; max-width:90%; border-radius:12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);" >
-            <h3 style="color:#D4AF37; margin-top:0;">📡 Import Live Results (Stage for Review)</h3>
+        <div style="background:#1a1a2e; border:1px solid #D4AF37; color:#fff; padding:25px; width:500px; max-width:90%; border-radius:12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
+            <h3 style="color:#D4AF37; margin-top:0;">📡 Import Live Results</h3>
             <div style="color:#aaa; font-size:0.9rem; margin-bottom:20px;">
                 Importing to: <strong style="color:#fff">${gender.toUpperCase()} ${dist}</strong><br>
-                <i style="font-size:0.8em">Results will be STAGED for review before publishing.</i>
+                <i style="font-size:0.8em">Requires "Start Live Tracker.bat"</i>
             </div>
             
             <div style="margin-bottom:15px;">
@@ -33,9 +32,9 @@ function openIsuImportModal(gender, dist) {
                 <div style="margin-bottom:10px;">
                     <label style="font-weight:bold; color:#ccc;">Import into Column:</label>
                     <select id="isu-column-select" class="form-control" style="background:#111; color:#fff; border:1px solid #444;">
-                        <option value="best">Best Time (Standard)</option>
                         <option value="time1">Race 1</option>
                         <option value="time2">Race 2</option>
+                        <option value="best">Best Time (Direct Overwrite)</option>
                     </select>
                 </div>
                 ` : ''}
@@ -46,8 +45,8 @@ function openIsuImportModal(gender, dist) {
             <div id="isu-preview-container" style="margin-top:15px; display:none;">
                 <h5 style="color:#ddd; margin-bottom:5px;">Data Preview</h5>
                 <div id="isu-preview-content" style="max-height:150px; overflow-y:auto; background:#000; padding:10px; border:1px solid #333; font-family:monospace; font-size:0.8rem; margin-bottom:10px;"></div>
-                <button class="btn btn-success w-100" onclick="importAsPending()">📥 Import as Pending (Live Unofficial)</button>
-                <div style="font-size:0.8em; color:#888; margin-top:5px; text-align:center;">Visible on Standings immediately. Roster unaffected.</div>
+                <button class="btn btn-success w-100" onclick="commitIsuImport()">✅ Confirm Import</button>
+                <button class="btn btn-outline-info w-100 mt-2" onclick="linkForAutoSync()">🔗 Link for Auto-Pilot (Updates Automatically)</button>
             </div>
 
             <div id="isu-status" style="margin-top:15px; padding:10px; border-radius:6px; font-size:0.85rem; display:none;"></div>
@@ -55,61 +54,9 @@ function openIsuImportModal(gender, dist) {
             <div style="margin-top:20px; text-align:right;">
                 <button class="btn btn-secondary" onclick="document.getElementById('isu-modal').remove()">Close</button>
             </div>
-        </div >
-        `;
+        </div>
+    `;
     document.body.appendChild(modal);
-}
-
-// ... (Helper functions remain the same) ...
-
-function importAsPending() {
-    if (!currentImportConfig.stagedData) return;
-
-    const { gender, dist, stagedData } = currentImportConfig;
-
-    // Convert to standard format
-    const newResults = stagedData.map((d, i) => ({
-        id: 'isu-' + Date.now() + '-' + i,
-        name: d.name,
-        rank: d.rank,
-        time: d.time,
-        best: d.time,
-        status: 'official' // The result itself is 'official' data, but the EVENT is 'pending'
-    }));
-
-    // Save to Live State as PENDING
-    if (!appState.events[gender]) appState.events[gender] = {};
-    appState.events[gender][dist] = {
-        results: newResults,
-        status: 'pending' // Key: Pending = Unofficial on site, No Roster Effect
-    };
-
-    // SAVE TO FILE (Pending Status)
-    if (appState.isAdmin) {
-        try {
-            fetch('/api/save-results', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    gender,
-                    distance: dist,
-                    results: newResults,
-                    status: 'pending'
-                })
-            });
-        } catch (e) {
-            console.error("Auto-pending save failed", e);
-        }
-    }
-
-    saveToStorage();
-
-    showToast(`✅ Imported as Unofficial! Review and PUBLISH to finalize.`);
-    document.getElementById('isu-modal').remove();
-
-    if (appState.currentTab === 'events') {
-        renderCurrentTab();
-    }
 }
 
 // Helper to find the proxy
@@ -176,7 +123,7 @@ function linkForAutoSync() {
     if (!appState.isuConfig.mappings) appState.isuConfig.mappings = {};
 
     // Save Mapping: "women_500m" -> { eventId: "...", compId: "..." }
-    const key = `${gender}_${dist} `;
+    const key = `${gender}_${dist}`;
     appState.isuConfig.mappings[key] = { eventId, competitionId };
     saveToStorage();
 
@@ -252,35 +199,10 @@ async function runAutoSyncPass() {
                     id: 'isu-auto-' + i, // Stable IDs based on rank/index?
                     name: d.name,
                     time: d.time,
-                    best: d.time,
-                    rank: d.rank,
-                    status: 'official' // Result is official data
+                    rank: d.rank
                 }));
 
                 appState.events[gender][dist].results = newResults;
-                // If not already published, ensure status is pending
-                if (appState.events[gender][dist].status !== 'published') {
-                    appState.events[gender][dist].status = 'pending';
-
-                    // AUTO-SAVE AS PENDING (Background DVR) - ADMIN ONLY
-                    if (appState.isAdmin) {
-                        try {
-                            fetch('/api/save-results', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    gender,
-                                    distance: dist,
-                                    results: newResults,
-                                    status: 'pending'
-                                })
-                            });
-                            console.log(`[Auto-Pilot] Auto-saved Pending results for ${key}`);
-                        } catch (e) {
-                            console.warn(`[Auto-Pilot] Save failed for ${key}`, e);
-                        }
-                    }
-                }
             }
         } catch (e) {
             console.error(`[Auto-Pilot] Failed to sync ${key}`, e);
@@ -298,24 +220,13 @@ if (appState.isuConfig && appState.isuConfig.autoSync) {
 // PUBLIC AUTO-START LOGIC
 // Checks if we should auto-connect to a live event (for public viewers)
 async function checkPublicAutoStart() {
-    const activeId = BRANDING_CONFIG.ACTIVE_ISU_EVENT_ID;
+    // Only run if we have a hardcoded event ID and app is in "fresh" state (no mappings)
+    // This allows the public site to auto-configure itself without user input.
+    if (BRANDING_CONFIG.ACTIVE_ISU_EVENT_ID &&
+        (!appState.isuConfig.mappings || Object.keys(appState.isuConfig.mappings).length === 0)) {
 
-    // 0. Reset if Event ID has changed (handle stale localStorage)
-    if (activeId && appState.isuConfig && appState.isuConfig.eventId && appState.isuConfig.eventId !== activeId) {
-        console.log(`[Public Auto-Start] Event ID changed from ${appState.isuConfig.eventId} to ${activeId}. Resetting Live Config.`);
-        appState.isuConfig = {
-            eventId: activeId,
-            mappings: {},
-            autoSync: false
-        };
-        saveToStorage(); // Commit the reset
-    }
-
-    // Always scan if we have an active Event ID to catch new races becoming live
-    if (activeId) {
-
-        console.log("[Public Auto-Start] Active Event Detected:", activeId);
-        const eventId = activeId;
+        console.log("[Public Auto-Start] Active Event Detected:", BRANDING_CONFIG.ACTIVE_ISU_EVENT_ID);
+        const eventId = BRANDING_CONFIG.ACTIVE_ISU_EVENT_ID;
 
         try {
             // Fetch Schedule to find what is "Now"
@@ -329,18 +240,12 @@ async function checkPublicAutoStart() {
 
             console.log(`[Public Auto-Start] Scanning ${races.length} races from schedule...`);
 
-            if (!appState.isuConfig) appState.isuConfig = {};
             if (!appState.isuConfig.mappings) appState.isuConfig.mappings = {};
-
-            // Set the Event ID in state
-            appState.isuConfig.eventId = eventId;
-
             let matchCount = 0;
 
             races.forEach(r => {
                 const title = (r.title || r.name || "").toLowerCase();
-                // Priority: Use 'identifier' (local ID, e.g. 1) if available, else 'id' (global ID, e.g. 5242)
-                const compId = r.identifier || r.id;
+                const rrId = r.id; // Or finding the result identifier
 
                 // 1. Detect Gender
                 let g = null;
@@ -349,38 +254,28 @@ async function checkPublicAutoStart() {
 
                 // 2. Detect Distance
                 let d = null;
-                // Robust Distance Matching (Order matters: Check longer numbers first)
                 if (title.includes('mass start')) d = 'mass_start';
                 else if (title.includes('team pursuit')) d = 'team_pursuit';
-                else if (title.includes('10000') || title.includes('10k')) d = '10000m';
-                else if (title.includes('5000') || title.includes('5k')) d = '5000m';
-                else if (title.includes('3000') || title.includes('3k')) d = '3000m';
-                else if (title.includes('1500')) d = '1500m';
-                else if (title.includes('1000')) d = '1000m';
-                else if (title.includes('500')) d = '500m';
+                else if (title.includes('500m')) d = '500m';
+                else if (title.includes('1000m')) d = '1000m';
+                else if (title.includes('1500m')) d = '1500m';
+                else if (title.includes('3000m')) d = '3000m';
+                else if (title.includes('5000m')) d = '5000m';
+                else if (title.includes('10000m')) d = '10000m';
 
                 if (g && d) {
                     // Extract correct Competition/Result ID
                     // Usually in links -> type: results -> identifier
-                    let finalCompId = compId; // Default to top-level
-                    let resLink = null;
-
+                    let compId = rrId;
                     if (r.links) {
-                        resLink = r.links.find(l => l.type === 'results');
-                        if (resLink) finalCompId = resLink.identifier;
+                        const resLink = r.links.find(l => l.type === 'results');
+                        if (resLink) compId = resLink.identifier;
                     }
 
                     const key = `${g}_${d}`;
-                    appState.isuConfig.mappings[key] = { eventId, competitionId: finalCompId };
-                    console.log(`[Public Auto-Start] Auto-Linked: ${key} -> Comp ${finalCompId}`);
+                    appState.isuConfig.mappings[key] = { eventId, competitionId: compId };
+                    console.log(`[Public Auto-Start] Auto-Linked: ${key} -> Comp ${compId}`);
                     matchCount++;
-
-                    // Auto-focus the view if this race is LIVE
-                    if (resLink && resLink.isLive) {
-                        console.log(`[Public Auto-Start] Found LIVE race: ${g} ${d}. Switching view.`);
-                        appState.viewGender = g;
-                        appState.viewDistance = d;
-                    }
                 }
             });
 
@@ -428,8 +323,7 @@ function startPublicAutoRefresh(gender, dist) {
         try {
             const url = `https://live.isuresults.eu/api/events/${map.eventId}/competitions/${map.competitionId}/results`;
             // Use relative proxy path which works on both Vercel and Local
-            // Add cache busting timestamp
-            const res = await fetch(`/api/isu-proxy?url=${encodeURIComponent(url)}&t=${Date.now()}`);
+            const res = await fetch(`/api/isu-proxy?url=${encodeURIComponent(url)}`);
             if (!res.ok) return;
 
             const data = await res.json();
@@ -444,7 +338,6 @@ function startPublicAutoRefresh(gender, dist) {
                     id: 'isu-auto-' + i,
                     name: d.name,
                     time: d.time,
-                    best: d.time, // Fix for sorting: renderDistanceTable expects .best
                     rank: d.rank
                 }));
 
@@ -462,7 +355,7 @@ function startPublicAutoRefresh(gender, dist) {
         } catch (e) {
             console.warn("Poll failed", e);
         }
-    }, 10000); // 10 seconds
+    }, 30000); // 30 seconds
 }
 
 async function fetchIsuSchedule() {

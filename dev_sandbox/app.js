@@ -62,10 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initializeState() {
     ['women', 'men'].forEach(gender => {
-        // Initialize stagedResults
-        if (!appState.stagedResults) appState.stagedResults = {};
-        if (!appState.stagedResults[gender]) appState.stagedResults[gender] = {};
-
         if (!appState.events[gender]) appState.events[gender] = {};
         if (typeof OLYMPIC_CONFIG !== 'undefined' && OLYMPIC_CONFIG[gender]) {
             Object.keys(OLYMPIC_CONFIG[gender]).forEach(dist => {
@@ -76,28 +72,6 @@ function initializeState() {
         }
     });
     loadFromStorage();
-
-    // EMERGENCY OVERRIDE
-    if (typeof window.MANUAL_RESULTS !== 'undefined') {
-        console.log("APPLYING MANUAL RESULTS OVERRIDE");
-        ['women', 'men'].forEach(g => {
-            if (window.MANUAL_RESULTS[g]) {
-                Object.keys(window.MANUAL_RESULTS[g]).forEach(d => {
-                    const entry = window.MANUAL_RESULTS[g][d];
-                    // Update state with manual data
-                    // Support both old Array format (implied published) and new Object format (explicit status)
-                    if (Array.isArray(entry)) {
-                        appState.events[g][d] = {
-                            results: entry,
-                            status: 'published'
-                        };
-                    } else {
-                        appState.events[g][d] = entry;
-                    }
-                });
-            }
-        });
-    }
 }
 
 function loadFromStorage() {
@@ -963,12 +937,7 @@ function renderEventEntry() {
     const config = OLYMPIC_CONFIG[gender][dist];
 
     let content = `
-        <div class="section-header">
-            <h2>Event Data Entry</h2>
-             <button class="btn btn-outline" style="border: 1px solid #444;" onclick="openIsuImportModal('${gender}', '${dist}')">
-                📡 Import Live Results
-            </button>
-        </div>
+        <div class="section-header"><h2>Event Data Entry</h2></div>
         ${renderEventSelectors()}
         <hr class="my-2">
     `;
@@ -1016,7 +985,7 @@ function renderEventEntry() {
         const isPublished = eventData.status === 'published';
         const statusBadge = isPublished
             ? '<span style="background:#22c55e; color:#fff; padding:4px 12px; border-radius:4px; font-size:0.85rem; font-weight:bold;">✅ PUBLISHED</span>'
-            : '<span style="background:#f59e0b; color:#000; padding:4px 12px; border-radius:4px; font-size:0.85rem; font-weight:bold;">⏳ PENDING (Unofficial)</span>';
+            : '<span style="background:#f59e0b; color:#000; padding:4px 12px; border-radius:4px; font-size:0.85rem; font-weight:bold;">⏳ PENDING</span>';
 
         content += `
             <div class="card mt-2">
@@ -1029,7 +998,7 @@ function renderEventEntry() {
                         ${statusBadge}
                         ${isPublished
                 ? `<button class="btn btn-sm btn-outline-warning" onclick="togglePublishStatus('${gender}', '${dist}')">📝 Unpublish</button>`
-                : `<button class="btn btn-sm btn-success" onclick="publishAndSaveResults('${gender}', '${dist}')" ${results.length === 0 ? 'disabled title="Add results first"' : ''}>🚀 Publish & Save to Project</button>`
+                : `<button class="btn btn-sm btn-success" onclick="togglePublishStatus('${gender}', '${dist}')" ${results.length === 0 ? 'disabled title="Add results first"' : ''}>🚀 Publish to Roster</button>`
             }
                         <button class="btn btn-sm btn-outline-info" onclick="openIsuImportModal('${gender}', '${dist}')" title="Import from ISU Live Feed">📡 Import</button>
                     </div>
@@ -1037,9 +1006,8 @@ function renderEventEntry() {
                 
                 ${!isPublished && results.length > 0 ? `
                     <div style="background:rgba(245, 158, 11, 0.1); border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:15px;">
-                        <strong style="color:#f59e0b;">⚠️ UNOFFICIAL LIVE MODE:</strong> 
-                        These results are visible on the Standings page as "Unofficial" but do <strong>NOT</strong> affect the Roster yet.
-                        <br>Click <strong>"Publish & Save to Project"</strong> above to make them official.
+                        <strong style="color:#f59e0b;">⚠️ DRAFT MODE:</strong> 
+                        These results are hidden from the public and do NOT affect the Roster until you click "Publish to Roster".
                     </div>
                 ` : ''}
                 
@@ -1185,7 +1153,6 @@ function addEventResult() {
             // No update
         } else {
             r.time = time;
-            r.best = time;
         }
     } else {
         // Add New Result
@@ -1201,7 +1168,6 @@ function addEventResult() {
             newResult.best = best;
         } else if (dist !== 'team_pursuit') {
             newResult.time = time;
-            newResult.best = time;
         }
 
         currentResults.push(newResult);
@@ -2200,7 +2166,7 @@ function renderMassStartTable(gender) {
                     <p class="text-muted" style="margin-bottom:0;">Accumulated points from Races 1-4. (Official selection uses Best 3 of 4).</p>
                 </div>
                 <div style="display:flex; gap:10px;">
-
+                    <button onclick="shareMsStandingsImage()" class="btn btn-sm" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #8a3ab9); color:white; border:none; font-size: 0.9rem; padding: 8px 16px; font-weight:700; box-shadow: 0 4px 15px rgba(220, 39, 67, 0.4);">📸 Insta Post</button>
                     <button onclick="shareMsStandingsPdf()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
                         PDF
@@ -2267,7 +2233,7 @@ function renderDistanceTable(gender, dist) {
         statusBanner = `
             <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2em;">✅</span>
-                <span style="font-weight: bold;">FINAL UNOFFICIAL RESULTS</span>
+                <span style="font-weight: bold;">OFFICIAL FINAL RESULTS</span>
             </div>
         `;
     } else if (results.length > 0) {
@@ -2294,13 +2260,10 @@ function renderDistanceTable(gender, dist) {
 
     // Sort by Best Time (asc)
     const sortedData = [...results].sort((a, b) => {
-        const timeA = a.best || a.time;
-        const timeB = b.best || b.time;
-
-        if (!timeA) return 1;
-        if (!timeB) return -1;
+        if (!a.best) return 1;
+        if (!b.best) return -1;
         // Simple numeric sort preferred if times are consistently formatted
-        return timeA.localeCompare(timeB, undefined, { numeric: true });
+        return a.best.localeCompare(b.best, undefined, { numeric: true });
     });
 
     const is500 = dist === '500m';
@@ -2318,7 +2281,6 @@ function renderDistanceTable(gender, dist) {
                     <button onclick="window.print()" class="btn btn-sm" style="background: #eee; color:#333; border:1px solid #ccc; font-size: 0.9rem; padding: 8px 16px; font-weight:700; display:flex; align-items:center; gap:6px;">
                         🖨️ Print
                     </button>
-
                 </div>
             </div>
             
@@ -2341,7 +2303,7 @@ function renderDistanceTable(gender, dist) {
                                     <td class="text-center" style="color:#aaa;">${s.time1 || '-'}</td>
                                     <td class="text-center" style="color:#aaa;">${s.time2 || '-'}</td>
                                 ` : ''}
-                                <td class="result-time-cell">${s.best || s.time || '-'}</td>
+                                <td class="text-center" style="font-size:1.1em; font-weight:bold; color:#fff;">${s.best || s.time || '-'}</td>
                             </tr>
                         `).join('') : '<tr><td colspan="5" class="text-center">No results entered.</td></tr>'}
                     </tbody>
@@ -2504,30 +2466,7 @@ function getSkatersToWatchData(gender, dist) {
             }))
         };
     }
-
-    // Standard Distances (3000m, 5000m, etc.)
-    const eventData = appState.events[gender][dist];
-    if (eventData && eventData.results && eventData.results.length > 0) {
-        // Sort by Best Time
-        const sorted = [...eventData.results].sort((a, b) => {
-            const tA = a.best || a.time;
-            const tB = b.best || b.time;
-            if (!tA) return 1; if (!tB) return -1;
-            return tA.localeCompare(tB, undefined, { numeric: true });
-        }).slice(0, 10);
-
-        return {
-            note: null,
-            skaters: sorted.map((s, i) => ({
-                rank: i + 1,
-                name: s.name,
-                time: s.best || s.time || 'NT',
-                notes: ''
-            }))
-        };
-    }
-
-    return { note: "No results recorded yet for this distance." };
+    return null;
 }
 
 function showSkatersToWatch(gender, dist) {
@@ -2535,7 +2474,7 @@ function showSkatersToWatch(gender, dist) {
 
     const genderLabel = gender === 'women' ? "Women's" : "Men's";
     const distLabel = dist === 'mass_start' ? 'Mass Start' : dist === 'team_pursuit' ? 'Team Pursuit' : dist;
-    const listSubHeader = dist === 'mass_start' ? 'Current Standings' : 'Top 10 Results';
+    const listSubHeader = dist === 'mass_start' ? 'Current Standings' : '2026 Season Bests';
     const valueHeader = dist === 'mass_start' ? 'Points' : 'Time';
 
     currentWatchListBlob = null;
@@ -2571,7 +2510,7 @@ function showSkatersToWatch(gender, dist) {
                             ${genderLabel}<br><span style="color: #D4AF37;">${distLabel}</span>
                         </h1>
                         <div style="margin-top: 10px; font-size: 14px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 3px;">
-                            Official Standings <span style="color: #D4AF37;">//</span> ${listSubHeader}
+                            Skaters To Watch <span style="color: #D4AF37;">//</span> ${listSubHeader}
                         </div>
                     </div>
 
@@ -2614,7 +2553,7 @@ function preRenderSkatersImage(gender, dist) {
 
     const genderLabel = gender === 'women' ? "WOMEN'S" : "MEN'S";
     const distLabel = dist === 'mass_start' ? 'MASS START' : dist.toUpperCase();
-    const listSubHeader = dist === 'mass_start' ? 'Current Standings' : 'Top 10 Results';
+    const listSubHeader = dist === 'mass_start' ? 'Current Standings' : '2026 Season Bests';
     const valueHeader = dist === 'mass_start' ? 'Points' : 'Performance';
 
     const exportContainer = document.createElement('div');
@@ -2632,7 +2571,7 @@ function preRenderSkatersImage(gender, dist) {
                     ${genderLabel}<br><span style="color: #D4AF37;">${distLabel}</span>
                 </h1>
                 <div style="margin-top: 15px; font-size: 22px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 5px;">
-                    Official Standings <span style="color: #D4AF37;">//</span> ${listSubHeader}
+                    Skaters to Watch <span style="color: #D4AF37;">//</span> ${listSubHeader}
                 </div>
                 <div style="position: absolute; top: 0; right: 0; text-align: right; opacity: 0.9;">
                     <div style="font-size: 16px; font-weight: 900; letter-spacing: 5px;"><span style="color: #fff;">SALTY</span> <span style="color: #D4AF37;">GOLD</span></div>
@@ -2667,14 +2606,13 @@ function preRenderSkatersImage(gender, dist) {
             document.body.removeChild(exportContainer);
             canvas.toBlob(blob => {
                 currentWatchListBlob = blob;
-                const typeLabel = dist === 'mass_start' ? 'Standings' : 'Results';
-                currentWatchListFileName = `SaltyGold_${gender}_${dist}_${typeLabel}.png`;
+                currentWatchListFileName = `SaltyGold_${dist}_WatchList.png`;
 
                 const btn = document.getElementById('insta-download-btn');
                 if (btn) {
                     btn.style.background = 'linear-gradient(45deg, #f09433, #dc2743, #bc1888, #8a3ab9)';
                     btn.style.opacity = '1';
-                    btn.innerText = 'SHARE IMAGE';
+                    btn.innerText = 'CREATE INSTA POST';
                 }
             }, 'image/png');
         }).catch(err => {
@@ -2694,11 +2632,10 @@ function downloadSkatersImage(gender, dist) {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
-        const titleText = dist === 'mass_start' ? 'Mass Start Standings' : `${gender.charAt(0).toUpperCase() + gender.slice(1)}'s ${dist} Results`;
         navigator.share({
             files: [file],
-            title: titleText,
-            text: `Latest results from the ${getBranding('SHORT_EVENT_NAME')}! ${getBranding('HASHTAG')}`
+            title: 'Skaters to Watch',
+            text: `Check out these athletes! ${getBranding('HASHTAG')}`
         }).then(() => showToast('Shared successfully!')).catch(() => saveAsFile(currentWatchListBlob, currentWatchListFileName));
     } else {
         saveAsFile(currentWatchListBlob, currentWatchListFileName);
@@ -3362,11 +3299,11 @@ function toggleAdminMode() {
     } else {
         // Use custom modal for login
         const content = `
-            <div class="form-group">
+        < div class="form-group" >
                 <label>Enter Admin Password</label>
                 <input type="password" id="admin-password" placeholder="Password" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); border: 1px solid #444; color: white;" required>
             </div>
-        `;
+    `;
 
         showCustomModal('Admin Login 🔒', content, (modal) => {
             const password = modal.querySelector('#admin-password').value;
@@ -3376,66 +3313,9 @@ function toggleAdminMode() {
                 setTimeout(() => location.reload(), 500);
                 return true;
             } else {
+                alert('Incorrect Password'); // This alert is fine, or we could use toast
                 return false;
             }
         });
     }
 }
-
-// =============================================================================
-// RESULT APPROVAL HELPERS
-// =============================================================================
-
-async function publishAndSaveResults(gender, dist) {
-    // 1. Get Current "Pending" Results
-    const eventData = appState.events[gender][dist];
-    if (!eventData || !eventData.results) return;
-
-    // 2. Mark as Published
-    eventData.status = 'published';
-    renderCurrentTab();
-
-    // 3. SEND TO LOCAL SERVER TO SAVE TO FILE
-    showToast("💾 Saving to Project...</br><small>Do not close window</small>", "info");
-
-    try {
-        const res = await fetch('/api/save-results', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                gender,
-                distance: dist,
-                results: eventData.results,
-                status: 'published'
-            })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            showToast("✅ Saved to Codebase!", "success");
-            // Alert user to push to git
-            setTimeout(() => {
-                alert("SUCCESS: Results saved to 'manual_results.js'.\n\nIMPORTANT: To make this live for everyone:\n1. Open your terminal\n2. Run: git add .\n3. Run: git commit -m \"Update results\"\n4. Run: git push");
-            }, 1000);
-        } else {
-            throw new Error(data.error || "Unknown error");
-        }
-
-    } catch (e) {
-        console.error("Save failed", e);
-        showToast(`❌ Aut-Save Failed: ${e.message}.`, "error");
-        alert(`Note: The results are live in THIS BROWSER solely. To save permanently, you need to ensure the local-dev-server is running.`);
-    }
-
-    saveToStorage();
-}
-
-function discardStagedResults(gender, dist) {
-    if (confirm("Clear these pending results?")) {
-        appState.events[gender][dist] = { results: [], status: 'pending' };
-        saveToStorage();
-        renderCurrentTab();
-        showToast("🗑️ Cleared pending results.");
-    }
-}
-

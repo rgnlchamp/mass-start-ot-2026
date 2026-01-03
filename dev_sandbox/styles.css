@@ -1568,16 +1568,3 @@ body.admin-mode .admin-only {
     animation: none;
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.9);
 }
-/* Fix for PDF print visibility from JS rendered tables */
-.result-time-cell {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #fff;
-    text-align: center;
-}
-
-@media print {
-    .result-time-cell {
-        color: #000 !important;
-    }
-}

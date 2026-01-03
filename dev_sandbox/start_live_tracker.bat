@@ -7,5 +7,5 @@ echo   Includes ISU Data Import Proxy
 echo ===================================================
 echo.
 echo.
-node local-dev-server.js
+node server.js
 pause

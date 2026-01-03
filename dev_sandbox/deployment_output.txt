@@ -1,0 +1,22 @@
+Vercel CLI 50.1.3
+Retrieving project…
+The `name` property in vercel.json is deprecated (https://vercel.link/name-prop)
+Deploying matt-ks-projects-09461048/mass-start-olympic-trials
+Uploading [--------------------] (0.0B/183B)
+Uploading [====================] (183.0B/183B)
+Inspect: https://vercel.com/matt-ks-projects-09461048/mass-start-olympic-trials/3zwoTFQMLEmi7VRbfL8nSJuba6t6 [2s]
+Production: https://mass-start-olympic-trials-pux7yrcs8-matt-ks-projects-09461048.vercel.app [2s]
+https://mass-start-olympic-trials-pux7yrcs8-matt-ks-projects-09461048.vercel.appQueued...
+Queued...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Previous build caches not available.
+Building: Downloading 9 deployment files...
+Building: Running "vercel build"
+Building: Vercel CLI 50.1.3
+Building: Build Completed in /vercel/output [26ms]
+Building: Deploying outputs...
+[2K[1A[2K[GProduction: https://mass-start-olympic-trials-pux7yrcs8-matt-ks-projects-09461048.vercel.app [7s]
+Completing...
+Aliased: https://mass-start-olympic-trials.vercel.app [7s]
