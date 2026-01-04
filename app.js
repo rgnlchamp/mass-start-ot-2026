@@ -777,11 +777,9 @@ function calculateReduction(gender) {
             // Only include results if published. 
             // This ensures DRAFT data doesn't leak into the team math.
             const eventData = appState.events[gender][dist];
-            // Generic Status Banner Logic
-            const isPublished = eventData.status === 'published' || eventData.status === 'official';
-            const hasResults = (eventData.results || []).length > 0; // Assuming 'results' refers to eventData.results
-
-
+            // Update: strictly check for 'published' status to match user request "Keep as O. Trials"
+            const isPublished = eventData.status === 'published';
+            const hasResults = (eventData.results || []).length > 0;
 
             if (hasResults && isPublished) {
                 // Only use results if they are published
@@ -889,6 +887,10 @@ function renderDistanceBreakdown(gender) {
             });
         } else {
             let trialsResults = [];
+            // Define distStatus early to use for filtering
+            const eventStatus = appState.events[gender][dist]?.status;
+            const isPublished = eventStatus === 'published';
+
             if (dist === 'mass_start') {
                 // Rule: Mass Start qualifiers only count after Race #4 is complete
                 const race4 = appState.msRaces[gender]?.[4];
@@ -901,7 +903,12 @@ function renderDistanceBreakdown(gender) {
                     trialsResults = []; // No qualifiers yet
                 }
             } else {
-                trialsResults = (appState.events[gender][dist].results || []);
+                // CHANGE: ONLY show athletes in the Quota List if result is PUBLISHED
+                if (isPublished) {
+                    trialsResults = (appState.events[gender][dist].results || []);
+                } else {
+                    trialsResults = []; // Ignore live/pending results for Roster purposes
+                }
             }
             // Filter Pre-noms
             const realTrials = trialsResults.filter(r => !config.preNominated.includes(r.name));
