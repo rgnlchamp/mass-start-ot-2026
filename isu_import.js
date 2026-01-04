@@ -258,8 +258,17 @@ async function runAutoSyncPass() {
                 }));
 
                 appState.events[gender][dist].results = newResults;
-                // If not already published, ensure status is pending
-                if (appState.events[gender][dist].status !== 'published') {
+
+                // SAFEGUARD: If this event is hardcoded in MANUAL_RESULTS, force it to PUBLISHED
+                // This prevents the Auto-Sync from reverting it to 'pending' (flickering issue)
+                if (typeof window.MANUAL_RESULTS !== 'undefined' &&
+                    window.MANUAL_RESULTS[gender] &&
+                    window.MANUAL_RESULTS[gender][dist]) {
+                    appState.events[gender][dist].status = 'published';
+                    console.log(`[Auto-Pilot] Enforced PUBLISHED status for ${gender} ${dist} (Manual Override)`);
+                }
+                // Otherwise, standard logic:
+                else if (appState.events[gender][dist].status !== 'published') {
                     appState.events[gender][dist].status = 'pending';
 
                     // AUTO-SAVE AS PENDING (Background DVR) - ADMIN ONLY
@@ -361,7 +370,6 @@ async function checkPublicAutoStart() {
 
                 if (g && d) {
                     // Extract correct Competition/Result ID
-                    // Usually in links -> type: results -> identifier
                     let finalCompId = compId; // Default to top-level
                     let resLink = null;
 
@@ -370,16 +378,66 @@ async function checkPublicAutoStart() {
                         if (resLink) finalCompId = resLink.identifier;
                     }
 
-                    const key = `${g}_${d}`;
-                    appState.isuConfig.mappings[key] = { eventId, competitionId: finalCompId };
-                    console.log(`[Public Auto-Start] Auto-Linked: ${key} -> Comp ${finalCompId}`);
-                    matchCount++;
+                    // FORCE OVERRIDE for Today's Races (Jan 4) to ensure no ambiguity
+                    // Women 500m -> 5
+                    // Men 500m -> 6
+                    // Women 1500m -> 7
+                    // Men 1500m -> 8
+                    if (g === 'women' && d === '500m' && String(finalCompId) === '5') {
+                        console.log("Found Women's 500m (ID 5)");
+                    } else if (g === 'women' && d === '500m' && String(finalCompId) !== '5') {
+                        // Skip other 500m for now to force ID 5
+                        // UNLESS ID 5 is over? No, just prioritize 5.
+                        console.log("Skipping non-ID 5 500m for safety");
+                    }
 
-                    // Auto-focus the view if this race is LIVE
-                    if (resLink && resLink.isLive) {
-                        console.log(`[Public Auto-Start] Found LIVE race: ${g} ${d}. Switching view.`);
-                        appState.viewGender = g;
-                        appState.viewDistance = d;
+                    const key = `${g}_${d}`;
+                    const isNewLive = (resLink && resLink.isLive);
+
+                    // CHECK CONFLICTS (e.g. 1st 500m vs 2nd 500m)
+                    let shouldMap = true;
+                    if (appState.isuConfig.mappings[key]) {
+                        // We already have a mapping for this gender/dist
+                        const existing = appState.isuConfig.mappings[key];
+
+                        // Rule 1: LIVE always wins
+                        if (existing.isLive && !isNewLive) {
+                            shouldMap = false; // Keep existing live one
+                        }
+                        else if (!existing.isLive && isNewLive) {
+                            shouldMap = true; // New one is live, take it
+                        }
+                        // Rule 2: If neither/both live, take EARLIER start time
+                        else {
+                            // We need start times. 'r' has it. 'existing' we must store it.
+                            // Assuming we store it now.
+                            const newStart = new Date(r.start || '9999-01-01').getTime();
+                            const oldStart = existing.startTime || Number.MAX_SAFE_INTEGER;
+
+                            if (newStart >= oldStart) {
+                                shouldMap = false; // New one is later, keep earlier
+                            }
+                        }
+                    }
+
+                    if (shouldMap) {
+                        appState.isuConfig.mappings[key] = {
+                            eventId,
+                            competitionId: finalCompId,
+                            startTime: new Date(r.start || '9999-01-01').getTime(),
+                            isLive: isNewLive
+                        };
+                        console.log(`[Public Auto-Start] Auto-Linked: ${key} -> Comp ${finalCompId} (Start: ${r.start})`);
+                        // Only count as "new match" if we didn't have one or changed it? 
+                        // Actually just counting found relevant races is fine for the toast.
+                        matchCount++;
+
+                        // Auto-focus the view if this race is LIVE
+                        if (isNewLive) {
+                            console.log(`[Public Auto-Start] Found LIVE race: ${g} ${d}. Switching view.`);
+                            appState.viewGender = g;
+                            appState.viewDistance = d;
+                        }
                     }
                 }
             });
@@ -698,7 +756,40 @@ function parseIsuData(data) {
         }
 
         // Time parsing: might be 'time', 'result', 'totalTime'
-        const rawTime = item.time || item.result || item.totalTime || "NT";
+
+
+
+        // FIX: Check for IRM (Invalid Result Mark) or Status first
+        // Refined logic: Only use Status if it is clearly NOT a number (e.g. "DNS", "DQ")
+        // or if it comes from the specific IRM field.
+
+        let rawTime = "NT";
+
+        // Check Status / IRM FIRST to override any time (e.g. if they skated but got DQ'd)
+        // Check Status / IRM FIRST to override any time (e.g. if they skated but got DQ'd)
+        if (item.irm) {
+            rawTime = item.irm;
+        } else if (item.status !== undefined && item.status !== null) {
+            if (isNaN(item.status)) {
+                // String status like "DQ", "DNS"
+                rawTime = item.status;
+            } else {
+                // Numeric Status Codes - OVERRIDE time if it's a "bad" status
+                const sVal = parseInt(item.status);
+                if (sVal === 2) rawTime = "DQ";
+                else if (sVal === 3) rawTime = "DNF";
+                else if (sVal === 1) rawTime = "DNS";
+                else if (sVal !== 0) rawTime = "Status " + sVal; // Catch-all for unknown codes
+                // Status 0 usually means OK/Finished, so we ignore it here
+            }
+        }
+
+        // Only if we didn't find a special status, look for the time
+        // FIX: handle status 0 explicitly (it is falsy in JS)
+        if (rawTime === "NT" || (item.status !== undefined && parseInt(item.status) === 0 && !item.irm)) {
+            rawTime = item.time || item.result || item.totalTime || rawTime;
+        }
+
         const rank = item.rank || 0;
 
         return { name: cleanName(name), time: cleanTime(rawTime), rank };

@@ -1,7 +1,7 @@
 const https = require('https');
 
 // CORRECTED ID: 1
-const target = 'https://api.isuresults.eu/events/2026_USA_0002/competitions/1/results';
+const target = 'https://api.isuresults.eu/events/2026_USA_0002/competitions/3/results';
 const url = `https://saltygold-trials.vercel.app/api/isu-proxy?url=${encodeURIComponent(target)}`;
 
 https.get(url, (res) => {

@@ -100,7 +100,7 @@ const SKATERS_TO_WATCH = {
                 { rank: 7, name: 'Tanner Worley', time: '1:09.94', notes: '', id: 68936 },
                 { rank: 8, name: 'Max Weber', time: '1:10.30', notes: 'PR', id: 68937 },
                 { rank: 9, name: 'Auggie Herman', time: '1:10.48', notes: 'PR', id: 60854 },
-                { rank: 10, name: 'Casey Dawson', time: '1:10.57', notes: '', id: 52314 }
+                { rank: 10, name: 'Austin Kleba', time: '1:10.66', notes: '', id: 52310 }
             ]
         },
         '1500m': {
