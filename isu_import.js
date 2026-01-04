@@ -381,14 +381,21 @@ async function checkPublicAutoStart() {
                     // FORCE OVERRIDE for Today's Races (Jan 4) to ensure no ambiguity
                     // Women 500m -> 5
                     // Men 500m -> 6
-                    // Women 1500m -> 7
-                    // Men 1500m -> 8
-                    if (g === 'women' && d === '500m' && String(finalCompId) === '5') {
-                        console.log("Found Women's 500m (ID 5)");
-                    } else if (g === 'women' && d === '500m' && String(finalCompId) !== '5') {
-                        // Skip other 500m for now to force ID 5
-                        // UNLESS ID 5 is over? No, just prioritize 5.
-                        console.log("Skipping non-ID 5 500m for safety");
+                    if (g === 'women' && d === '500m') {
+                        if (String(finalCompId) === '5') {
+                            console.log("Found Women's 500m (ID 5)");
+                        } else {
+                            console.log(`Skipping Women's 500m ID ${finalCompId} (Target: 5)`);
+                            return; // SKIP this iteration
+                        }
+                    }
+                    if (g === 'men' && d === '500m') {
+                        if (String(finalCompId) === '6') {
+                            console.log("Found Men's 500m (ID 6)");
+                        } else {
+                            console.log(`Skipping Men's 500m ID ${finalCompId} (Target: 6)`);
+                            return; // SKIP this iteration
+                        }
                     }
 
                     const key = `${g}_${d}`;
