@@ -493,7 +493,10 @@ function startPublicAutoRefresh(gender, dist) {
 
     console.log(`[Public LIVE] Started polling for ${gender} ${dist}`);
 
-    publicRefreshInterval = setInterval(async () => {
+    console.log(`[Public LIVE] Started polling for ${gender} ${dist}`);
+
+    // shared fetch function
+    const performFetch = async () => {
         // Fetch silently
         try {
             const url = `https://api.isuresults.eu/events/${map.eventId}/competitions/${map.competitionId}/results`;
@@ -527,11 +530,22 @@ function startPublicAutoRefresh(gender, dist) {
             parsed.forEach((p, idx) => {
                 const val = parseTimeVal(p.time);
                 if (val === Infinity) {
-                    // It's a non-time status (DQ, DNF, DNS, etc)
-                    // Keep the text status if possible, or just '-'
                     p.rank = p.time && p.time.length < 5 ? p.time : '-';
                 } else {
                     p.rank = idx + 1;
+                }
+
+                // 500m Column Mapping Logic
+                // If this is the 1st 500m (Women ID 5, Men ID 6), map 'time' -> 'time1'
+                if (dist === '500m') {
+                    const cId = String(map.competitionId);
+                    if (cId === '5' || cId === '6') {
+                        p.time1 = p.time;
+                    }
+                    // If 2nd 500m (Women ID 12, Men ID 11), map 'time' -> 'time2'
+                    else if (cId === '11' || cId === '12') {
+                        p.time2 = p.time;
+                    }
                 }
             });
 
@@ -547,6 +561,10 @@ function startPublicAutoRefresh(gender, dist) {
                 if (!appState.events[gender][dist]) appState.events[gender][dist] = { results: [] };
 
                 const oldLen = (appState.events[gender][dist].results || []).length;
+
+                // For 500m, we might need to MERGE with existing data if we want to keep Race 1 when doing Race 2
+                // BUT for today (Race 1), we can just overwrite. 
+                // However, the requested logic is just to show it in the column.
                 appState.events[gender][dist].results = parsed;
                 appState.events[gender][dist].status = 'pending';
 
@@ -561,7 +579,14 @@ function startPublicAutoRefresh(gender, dist) {
         } catch (e) {
             console.warn("Poll failed", e);
         }
-    }, 10000); // 10 seconds
+    };
+
+    // Run Immediately!
+    performFetch();
+
+    // Then Loop
+    publicRefreshInterval = setInterval(performFetch, 10000); // 10 seconds
+
 }
 
 async function fetchIsuSchedule() {
